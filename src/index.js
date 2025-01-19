@@ -1560,12 +1560,74 @@ function renderRightPart(tezkit_app_data) {
     }
 }
 
-function renderLeftPart() {
-  const chat_lr_wrapper = document.querySelector(`.chat_modal__j7hD9nXt3QpLvFz1uY6j7m2 > .chat-lr-wrapper > .left-side-chat`)
-  console.log('here will catch and update the left part',chat_lr_wrapper)
-  chat_lr_wrapper.textContent = "load left side chat"
-  // return <div>
+
+
+async function fetchV1Users() {
+  const myHeaders = new Headers();
+  myHeaders.append("x-api-key", "amV3ZWxlcnlraW5nX19TRVBSQVRPUl9fdjFhcHAx");
+  myHeaders.append("Content-Type", "application/json");
+
+  const raw = JSON.stringify({
+    "app_name": "v1app1",
+    "version": "V1",
+    "tenant": "jeweleryking"
+  });
+
+  const requestOptions = {
+    method: "POST",
+    headers: myHeaders,
+    body: raw,
+    redirect: "follow"
+  };
+
+  try {
+    const response = await fetch(
+      "https://gfxb0jf19k.execute-api.ap-south-1.amazonaws.com/prod/users_list",
+      requestOptions
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const usersList = await response.json(); // Parse the JSON response
+    return usersList; // Return the fetched data
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return []; // Return an empty array on error
+  }
 }
+
+async function renderLeftPart() {
+  const usersList = await fetchV1Users(); // Fetch the user list from the API
+
+  const chat_lr_wrapper = document.querySelector(
+    `.chat_modal__j7hD9nXt3QpLvFz1uY6j7m2 > .chat-lr-wrapper > .left-side-chat`
+  );
+
+  if (!chat_lr_wrapper) {
+    console.error("Left side chat container not found.");
+    return;
+  }
+
+  // Clear previous content
+  chat_lr_wrapper.textContent = "";
+
+  // Loop through usersList and create elements for each user's full_name
+  usersList.forEach((user) => {
+    const userElement = document.createElement("div");
+    userElement.textContent = user.full_name;
+    userElement.className = "user-name-item"; // Optional class for styling
+    chat_lr_wrapper.appendChild(userElement);
+  });
+
+  console.log("Left side chat updated with users' names.");
+}
+
+// Call the renderLeftPart function to fetch and render users
+renderLeftPart();
+
+
 
 function createChatModal(tezkit_app_data) {
   console.log("we are creating this on the clikc???")
@@ -1840,7 +1902,7 @@ function createChatModal(tezkit_app_data) {
 
   chat_modal_opener_container.addEventListener("click", async () => {
 
-    renderLeftPart()
+    renderLeftPart(tezkit_app_data)
     renderRightPart(tezkit_app_data)
 
     toggleChatModal(loggedInUser);
