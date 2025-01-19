@@ -1411,6 +1411,7 @@ async function fetchV1Users() {
     return []; // Return an empty array on error
   }
 }
+
 function renderRightPart(tezkit_app_data) {
   console.log("aerwerwerewrewsdfsdf");
   // const badge = document.getElementById("unread_chat_msgs_num");
@@ -1643,7 +1644,7 @@ async function renderLeftPart() {
 
       // chatHeader.querySelector(".chat_header");
     const theme = localStorage.getItem("theme");
-    const chatFooter = createChatFooter(tezkit_app_data, theme);
+    const chatFooter = createChatFooter(tezkit_app_data, theme, user);
     rsc.appendChild(chatFooter)
 
       if (theme) {
@@ -1931,7 +1932,8 @@ function createChatBody() {
   return chatBody;
 }
 
-function createChatFooter(tezkit_app_data, theme) {
+function createChatFooter(tezkit_app_data, theme, user) {
+  console.log("hsdfsadfasdf user in footer",user)
   const chatFooter = document.createElement("div");
   chatFooter.classList.add("chat_footer");
 
@@ -1940,7 +1942,7 @@ function createChatFooter(tezkit_app_data, theme) {
   chatInput.id = "chatInput";
   chatInput.placeholder = "Type here...";
 
-  const sendButton = createSendButton(tezkit_app_data, chatInput);
+  const sendButton = createSendButton(tezkit_app_data, chatInput,"global_for__"+user.id);
 
   applyThemeToFooter(sendButton, theme);
 
@@ -1950,21 +1952,21 @@ function createChatFooter(tezkit_app_data, theme) {
   return chatFooter;
 }
 
-function createSendButton(tezkit_app_data, chatInput) {
+function createSendButton(tezkit_app_data, chatInput,to_id) {
   const sendButton = document.createElement("button");
   sendButton.id = "sendButton";
   sendButton.textContent = "Send";
 
-  sendButton.addEventListener("click", () => handleSend(tezkit_app_data, chatInput));
+  sendButton.addEventListener("click", () => handleSend(tezkit_app_data, chatInput,to_id));
 
   return sendButton;
 }
 
-function handleSend(tezkit_app_data, chatInput) {
+function handleSend(tezkit_app_data, chatInput, to_id) {
   if (loggedInUser) {
     console.log("Sending message...", loggedInUser);
 
-    const newMessage = createNewMessage(loggedInUser, chatInput.value);
+    const newMessage = createNewMessage(loggedInUser, chatInput.value, to_id);
 
     if (chatInput.value) {
       const msgId = addNewElementToChatBody(
@@ -1987,9 +1989,9 @@ function handleSend(tezkit_app_data, chatInput) {
   }
 }
 
-function createNewMessage(loggedInUser, messageContent) {
+function createNewMessage(loggedInUser, messageContent, to_id) {
   return {
-    room: "global_for__" + loggedInUser.tenant_info.id,
+    room: to_id,
     message: {
       message: messageContent,
       timestamp: Date.now(),
