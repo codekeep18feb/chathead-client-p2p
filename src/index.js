@@ -5,7 +5,7 @@
 import "./style.css";
 import io from "socket.io-client";
 
-console.log("Client Activated!!!",process.env.WS_SERVER);
+console.log("Client Activated!!!", process.env.WS_SERVER);
 
 const arbitrary_string_to_diff = "j7hD9nXt3QpLvFz1uY6j7m2";
 
@@ -565,7 +565,6 @@ function addP2BMessageToChatBody(
   let tn1;
   let append_msg = null;
 
-
   if (!obj.message.msg_id) {
     tn1 = getNextCorrectLength("chatBody", "isittrueit's running twice");
     obj.message.msg_id = tn1;
@@ -624,7 +623,6 @@ function addP2BMessageToChatBody(
         new_messageElement.classList.add("admin");
       }
     }
-
 
     if (frm_top) {
       chatBody.prepend(messageWrapper);
@@ -1089,9 +1087,8 @@ async function makeMeAPICall(token) {
 
 let loggedInUser = null;
 
-
-async function fetchBotContent(app_name,tenant) {
-  console.log("ensure tenant_id is tenant_id",tenant)
+async function fetchBotContent(app_name, tenant) {
+  console.log("ensure tenant_id is tenant_id", tenant);
   const myHeaders = new Headers();
   myHeaders.append("x-api-key", "bGVnYWwxMjNfX1NFUFJBVE9SX190ZXN0ZGRk");
 
@@ -1101,19 +1098,21 @@ async function fetchBotContent(app_name,tenant) {
     method: "GET",
     headers: myHeaders,
     // body: raw,
-    redirect: "follow"
+    redirect: "follow",
   };
 
   try {
-    const response = await fetch(`https://sk5ge5ejhd.execute-api.ap-south-1.amazonaws.com/prod/get_bot_content?app_name=${app_name}&tenant_id=${tenant}`, requestOptions);
+    const response = await fetch(
+      `https://sk5ge5ejhd.execute-api.ap-south-1.amazonaws.com/prod/get_bot_content?app_name=${app_name}&tenant_id=${tenant}`,
+      requestOptions
+    );
     const result = await response.json();
     console.log(result);
-    return result
+    return result;
   } catch (error) {
     console.error(error);
   }
 }
-
 
 function msgHandler(socket, data, tezkit_app_data, msg_type = "REGULAR") {
   const p_data = JSON.parse(data);
@@ -1213,351 +1212,166 @@ function addChatToDB(new_rply_msg_obj) {
     .catch((error) => console.error(error));
 }
 
-function renderRightPart(tezkit_app_data) {
-  console.log("aerwerwerewrewsdfsdf");
-    const badge = document.getElementById("unread_chat_msgs_num");
+async function fetchMessages(apiUrl, loadingElement) {
+  const tezkit_app_data = localStorage.getItem("tezkit_app_data");
 
-    badge.textContent = "0";
+  loadingElement.textContent = "Loading...";
 
-    // if there is any msgs in unread ls
-    const tezkit_msgs_unread_data = localStorage.getItem(
-      "tezkit_msgs_unread_data"
-    );
-    const tezkit_msgs_unread_p_data = JSON.parse(tezkit_msgs_unread_data);
+  const tezkit_app_pdata = JSON.parse(tezkit_app_data);
 
-    // const tezkit_msgs_read_data = localStorage.getItem("tezkit_msgs_read_data");
-    // const tezkit_msgs_read_p_data = JSON.parse(tezkit_msgs_read_data);
+  console.log(
+    tezkit_app_pdata.tenant_info.id,
+    "tezkit_apdsp_datdasdfsdf",
+    loggedInUser.uid
+  );
+  try {
+    const token = localStorage.getItem("tezkit_token");
 
-    // Function to fetch messages from API
-    async function fetchMessages(apiUrl) {
-      loadingElement.textContent = "Loading...";
-
-      const tezkit_app_pdata = JSON.parse(tezkit_app_data);
-
+    if (!token && tezkit_app_pdata.settings.version == "V1") {
+      throw new Error("Token is missing");
+    }
+    let response = null;
+    if (tezkit_app_pdata.settings.version == "V1") {
+      console.log("arenot u going frm here???");
+      response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Authorization: token,
+          Accept: "application/json",
+        },
+      });
+    } else if (tezkit_app_pdata.settings.version != "V1") {
       console.log(
-        tezkit_app_pdata.tenant_info.id,
-        "tezkit_apdsp_datdasdfsdf",
-        loggedInUser.uid
+        "arenot u going frm here??? no",
+        tezkit_app_pdata.settings.version
       );
-      try {
-        const token = localStorage.getItem("tezkit_token");
 
-        if (!token && tezkit_app_pdata.settings.version == "V1") {
-          throw new Error("Token is missing");
+      response = await fetch(
+        `${apiUrl}&uid=${loggedInUser.uid}&other_user_id=${tezkit_app_pdata.tenant_info.id}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
         }
-        let response = null;
-        if (tezkit_app_pdata.settings.version == "V1") {
-          console.log("arenot u going frm here???");
-          response = await fetch(apiUrl, {
-            method: "GET",
-            headers: {
-              Authorization: token,
-              Accept: "application/json",
-            },
-          });
-        } else if (tezkit_app_pdata.settings.version != "V1") {
-          console.log(
-            "arenot u going frm here??? no",
-            tezkit_app_pdata.settings.version
-          );
-
-          response = await fetch(
-            `${apiUrl}&uid=${loggedInUser.uid}&other_user_id=${tezkit_app_pdata.tenant_info.id}`,
-            {
-              method: "GET",
-              headers: {
-                Accept: "application/json",
-              },
-            }
-          );
-        }
-
-        if (!response.ok) {
-          loadingElement.textContent = "";
-
-          throw new Error("Failed to fetch data");
-        }
-
-        const data = await response.json();
-        loadingElement.textContent = "";
-
-        return data;
-      } catch (error) {
-        console.error("Error fetching messages:", error);
-      }
+      );
     }
 
-    // Initialize variables
-    let isLoading = false;
-    let currentPage = 1;
-    let totalPages = 0;
-    console.log("let'saddapp_name", loggedInUser.app_name);
-    const apiUrlBase = `https://wtqbptd4j8.execute-api.ap-south-1.amazonaws.com/prod/get_chat?app_name=${loggedInUser.app_name}&page=`;
+    if (!response.ok) {
+      loadingElement.textContent = "";
 
-    // Reference to the chat body container
-    const chatBody = document.getElementById("chatBody");
+      throw new Error("Failed to fetch data");
+    }
 
-    // Create and append the loading indicator
-    const loadingElement = document.createElement("div");
-    loadingElement.id = "loading-message";
+    const data = await response.json();
     loadingElement.textContent = "";
-    chatBody.prepend(loadingElement);
 
-    let lastMessageElement = null; // Declare globally
+    return data;
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+  }
+}
 
-    // Function to append messages to the chat body
-    function addMessagesToChatBody(messages, frm_top) {
-      // const previousScrollHeight = chatBody.scrollHeight; // Save current scroll height before adding messages
+// Function to append messages to the chat body
+function addMessagesToChatBody(messages, frm_top) {
+  // const previousScrollHeight = chatBody.scrollHeight; // Save current scroll height before adding messages
 
-      // Record the current scroll height and scroll position
-      const previousScrollHeight = chatBody.scrollHeight;
-      const previousScrollTop = chatBody.scrollTop;
-      messages.forEach((p_data) => {
-        addNewElementToChatBody(
-          chatBody,
-          p_data,
-          p_data.type,
-          false,
-          p_data.direction,
-          frm_top
-        );
-      });
-
-      // Adjust scroll position to show the newly loaded messages
-      // const newScrollHeight = chatBody.scrollHeight;
-      // chatBody.scrollTop = newScrollHeight - previousScrollHeight;
-
-      // Calculate the new scroll position to maintain the previous last message's position
-      const newScrollHeight = chatBody.scrollHeight;
-      const heightDifference = newScrollHeight - previousScrollHeight;
-      chatBody.scrollTop = previousScrollTop + heightDifference;
-
-      // Create the lastMessageElement only if it doesn't exist yet
-      if (!lastMessageElement) {
-        lastMessageElement = document.createElement("div");
-        lastMessageElement.id = "last-message"; // This is the element being observed
-        chatBody.prepend(lastMessageElement); // Add it to the top
-        observer.observe(lastMessageElement); // Start observing the last message element
-      }
-    }
-
-    // Function to load more messages
-    async function loadMoreMessages() {
-      if (isLoading || (totalPages > 0 && currentPage >= totalPages)) {
-        return;
-      }
-
-      isLoading = true;
-      loadingElement.textContent = "Loading...";
-
-      try {
-        const apiUrl = `${apiUrlBase}${currentPage + 1}`;
-        const data = await fetchMessages(apiUrl);
-
-        if (data) {
-          totalPages = data.pagination.total_pages || totalPages;
-          currentPage = data.pagination.current_page || currentPage + 1;
-
-          if (data.messages && data.messages.length) {
-            const rev_msgs = data.messages.reverse();
-            addMessagesToChatBody(rev_msgs, true);
-          }
-
-          console.log("datadsfsdafasdf", data);
-
-          console.log("datadsfsdafasdfprv_msgs_ls", data);
-
-          // Filter messages where the status is not 'READ'
-          const messagesNotRead = data.messages
-            .filter((message) => message.message.status !== "READ")
-            .map((message) => message.message.msg_id);
-
-          console.log("messagesNotReadSDFSD1111", messagesNotRead);
-          if (messagesNotRead.length) {
-            console.log(
-              "sdfiuwhefijsqdhifsdasadddfsdff",
-              socket,
-              messagesNotRead,
-              "DELIVERED",
-              loggedInUser.app_name,
-              loggedInUser.tenant_info.id
-            );
-
-            const deliveryPayload = {
-              type: "status",
-              msg_ids: messagesNotRead,
-              status: "READ",
-            };
-            updateChatToDB(deliveryPayload);
-            informPeerSysAboutBULKMsgsStatus(
-              socket,
-              messagesNotRead,
-              "READ",
-              loggedInUser.app_name,
-              loggedInUser.tenant_info.id
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error loading more messages:", error);
-      } finally {
-        isLoading = false;
-        loadingElement.textContent = "";
-      }
-    }
-
-    // IntersectionObserver for detecting when the top element is visible
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            console.log("Top message in view, loading more messages...");
-            loadMoreMessages();
-          }
-        });
-      },
-      {
-        root: chatBody,
-        threshold: 1.0,
-      }
+  // Record the current scroll height and scroll position
+  const previousScrollHeight = chatBody.scrollHeight;
+  const previousScrollTop = chatBody.scrollTop;
+  messages.forEach((p_data) => {
+    addNewElementToChatBody(
+      chatBody,
+      p_data,
+      p_data.type,
+      false,
+      p_data.direction,
+      frm_top
     );
+  });
 
-    // Append initial messages and setup observer
-    (async function initializeChat() {
-      if (loggedInUser) {
-        const initialApiUrl = `${apiUrlBase}${currentPage}`;
+  // Adjust scroll position to show the newly loaded messages
+  // const newScrollHeight = chatBody.scrollHeight;
+  // chatBody.scrollTop = newScrollHeight - previousScrollHeight;
 
-        const prv_msgs_ls = await fetchMessages(initialApiUrl);
-        console.log("datadsfsdafasdfprv_msgs_ls", prv_msgs_ls);
+  // Calculate the new scroll position to maintain the previous last message's position
+  const newScrollHeight = chatBody.scrollHeight;
+  const heightDifference = newScrollHeight - previousScrollHeight;
+  chatBody.scrollTop = previousScrollTop + heightDifference;
 
-        // Filter messages where the status is not 'READ'
-        const messagesNotRead = prv_msgs_ls.messages
-          .filter((message) => message.message.status !== "READ")
-          .map((message) => message.message.msg_id);
+  // Create the lastMessageElement only if it doesn't exist yet
+  if (!lastMessageElement) {
+    lastMessageElement = document.createElement("div");
+    lastMessageElement.id = "last-message"; // This is the element being observed
+    chatBody.prepend(lastMessageElement); // Add it to the top
+    observer.observe(lastMessageElement); // Start observing the last message element
+  }
+}
 
-        console.log("messagesNotReadSDFSD", messagesNotRead);
-        if (messagesNotRead.length == 0){
-        const chatBody = document.getElementById("chatBody");
-          const obj = {
-            "_id": "67858f022b0e31401e379c6a",
-            "room": "global_for__1",
-            "message": {
-                "message": "bbbb",
-                "timestamp": 1736806146034,
-                "frm_user": {
-                    "user": "sharp1",
-                    "id": "sharp1"
-                },
-                "to_user": {
-                    "id": "1"
-                },
-                "app_name": "v2app1",
-                "ret_id": "msg_id__460350",
-                "msg_id": "msg_id__460350"
-            },
-            "app_name": "v2app1",
-            "direction": "RECEIVED"
-        }
-          // addP2BMessageToChatBody(chatBody, obj)
-          
-          console.log("loggeriend user",loggedInUser)
-          const botContent = await fetchBotContent(loggedInUser.app_name,loggedInUser.tenant)
-          console.log("botContentsdfsda",botContent.bot_payload)
-          //MAKE THE CALL HERE TO GET THE BOT CONTENTS
+ // Function to load more messages
+ async function loadMoreMessages() {
+ console.log("whaeriwer")
+  if (isLoading || (totalPages > 0 && currentPage >= totalPages)) {
+    return;
+  }
 
-          
+  isLoading = true;
+  loadingElement.textContent = "Loading...";
 
-          if (botContent && botContent.bot_payload){
-            renderNode(botContent.bot_payload);
+  try {
+    const apiUrl = `${apiUrlBase}${currentPage + 1}`;
+    const data = await fetchMessages(apiUrl, loadingElement);
 
-          }
-        }
-        if (messagesNotRead.length) {
-          const deliveryPayload = {
-            type: "status",
-            msg_ids: messagesNotRead,
-            status: "READ",
-          };
-          updateChatToDB(deliveryPayload);
-          console.log(
-            "sdfiuwhefijsqdhifsdaf",
-            socket,
-            messagesNotRead
-            // status = "DELIVERED",
-            // app_name,
-            // user_id
-          );
-          informPeerSysAboutBULKMsgsStatus(
-            socket,
-            messagesNotRead,
-            "READ",
-            loggedInUser.app_name,
-            loggedInUser.tenant_info.id
-          );
-        }
+    if (data) {
+      totalPages = data.pagination.total_pages || totalPages;
+      currentPage = data.pagination.current_page || currentPage + 1;
 
-        if (prv_msgs_ls) {
-          const { messages, pagination } = prv_msgs_ls;
-
-          totalPages = pagination.total_pages || 1;
-          currentPage = pagination.current_page || 1;
-
-          if (messages && messages.length) {
-            chatBody.innerHTML = ""; // Clear the chat body
-            addMessagesToChatBody(messages);
-
-            // Observe the topmost message
-            const firstMessage = chatBody.firstElementChild;
-            if (firstMessage) {
-              observer.observe(firstMessage);
-            }
-
-            // Scroll to the bottom of the initial messages
-            chatBody.scrollTop = chatBody.scrollHeight;
-          }
-        }
+      if (data.messages && data.messages.length) {
+        const rev_msgs = data.messages.reverse();
+        addMessagesToChatBody(rev_msgs, true);
       }
-    })();
 
-    if (tezkit_msgs_unread_p_data.msgs.length) {
-      tezkit_msgs_unread_p_data.msgs.forEach((p_data) => {
-        updateNotificationBell(tezkit_app_data);
-        const msg = p_data["message"]["message"];
-        const timestamp = p_data["message"]["timestamp"];
-        let ret_id;
-        let msg_id;
-        if (p_data["message"].hasOwnProperty("ret_id")) {
-          ret_id = p_data["message"]["ret_id"];
-        }
+      console.log("datadsfsdafasdf", data);
 
-        if (p_data["message"].hasOwnProperty("msg_id")) {
-          msg_id = p_data["message"]["msg_id"];
-        }
+      console.log("datadsfsdafasdfprv_msgs_ls", data);
 
-        console.log("HERE WE MIGHT WANNA SEND THE TYPE CORRECTLY??/", p_data);
+      // Filter messages where the status is not 'READ'
+      const messagesNotRead = data.messages
+        .filter((message) => message.message.status !== "READ")
+        .map((message) => message.message.msg_id);
 
-        addNewElementToChatBody(chatBody, p_data, p_data.type, true);
+      console.log("messagesNotReadSDFSD1111", messagesNotRead);
+      if (messagesNotRead.length) {
+        console.log(
+          "sdfiuwhefijsqdhifsdasadddfsdff",
+          socket,
+          messagesNotRead,
+          "DELIVERED",
+          loggedInUser.app_name,
+          loggedInUser.tenant_info.id
+        );
 
-        //check if it was a sent msg or recieved one
-        if (p_data.message.frm_user.id != loggedInUser.id) {
-          informPeerSysAboutMsgStatus(
-            socket,
-            ret_id,
-            "READ",
-            loggedInUser.app_name,
-            p_data.message.frm_user.id
-          );
-        }
-      });
-      const cleared_msgs_obj = {
-        api_key: tezkit_msgs_unread_p_data.api_key,
-        msgs: [],
-      };
-      localStorage.setItem(
-        "tezkit_msgs_unread_data",
-        JSON.stringify(cleared_msgs_obj)
-      );
+        const deliveryPayload = {
+          type: "status",
+          msg_ids: messagesNotRead,
+          status: "READ",
+        };
+        updateChatToDB(deliveryPayload);
+        informPeerSysAboutBULKMsgsStatus(
+          socket,
+          messagesNotRead,
+          "READ",
+          loggedInUser.app_name,
+          loggedInUser.tenant_info.id
+        );
+      }
     }
+  } catch (error) {
+    console.error("Error loading more messages:", error);
+  } finally {
+    isLoading = false;
+    loadingElement.textContent = "";
+  }
 }
 
 
@@ -1568,16 +1382,16 @@ async function fetchV1Users() {
   myHeaders.append("Content-Type", "application/json");
 
   const raw = JSON.stringify({
-    "app_name": "v1app1",
-    "version": "V1",
-    "tenant": "jeweleryking"
+    app_name: "v1app1",
+    version: "V1",
+    tenant: "jeweleryking",
   });
 
   const requestOptions = {
     method: "POST",
     headers: myHeaders,
     body: raw,
-    redirect: "follow"
+    redirect: "follow",
   };
 
   try {
@@ -1595,6 +1409,194 @@ async function fetchV1Users() {
   } catch (error) {
     console.error("Error fetching users:", error);
     return []; // Return an empty array on error
+  }
+}
+
+function renderRightPart(tezkit_app_data) {
+  console.log("aerwerwerewrewsdfsdf");
+  // const badge = document.getElementById("unread_chat_msgs_num");
+
+  // badge.textContent = "0";
+
+  // if there is any msgs in unread ls
+  const tezkit_msgs_unread_data = localStorage.getItem(
+    "tezkit_msgs_unread_data"
+  );
+  const tezkit_msgs_unread_p_data = JSON.parse(tezkit_msgs_unread_data);
+
+  // Function to fetch messages from API
+
+  // Initialize variables
+  let isLoading = false;
+  let currentPage = 1;
+  let totalPages = 0;
+  console.log("let'saddapp_name", loggedInUser.app_name);
+  const apiUrlBase = `https://wtqbptd4j8.execute-api.ap-south-1.amazonaws.com/prod/get_chat?app_name=${loggedInUser.app_name}&page=`;
+
+  // Reference to the chat body container
+  const chatBody = document.getElementById("chatBody");
+
+  // Create and append the loading indicator
+  const loadingElement = document.createElement("div");
+  loadingElement.id = "loading-message";
+  loadingElement.textContent = "";
+  chatBody.prepend(loadingElement);
+  console.log("arewqrewrwer")
+  // let lastMessageElement = null; // Declare globally
+
+ 
+  // IntersectionObserver for detecting when the top element is visible
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          console.log("Top message in view, loading more messages...");
+          loadMoreMessages();
+        }
+      });
+    },
+    {
+      root: chatBody,
+      threshold: 1.0,
+    }
+  );
+
+  // Append initial messages and setup observer
+  (async function initializeChat() {
+    if (loggedInUser) {
+    console.log("arewerewrew")
+      const initialApiUrl = `${apiUrlBase}${currentPage}`;
+
+      const prv_msgs_ls = await fetchMessages(initialApiUrl, loadingElement);
+      console.log("datadsfsdafasdfprv_msgs_ls", prv_msgs_ls);
+
+      // Filter messages where the status is not 'READ'
+      const messagesNotRead = prv_msgs_ls.messages
+        .filter((message) => message.message.status !== "READ")
+        .map((message) => message.message.msg_id);
+
+      console.log("messagesNotReadSDFSD", messagesNotRead);
+      if (messagesNotRead.length == 0) {
+        const chatBody = document.getElementById("chatBody");
+        const obj = {
+          _id: "67858f022b0e31401e379c6a",
+          room: "global_for__1",
+          message: {
+            message: "bbbb",
+            timestamp: 1736806146034,
+            frm_user: {
+              user: "sharp1",
+              id: "sharp1",
+            },
+            to_user: {
+              id: "1",
+            },
+            app_name: "v2app1",
+            ret_id: "msg_id__460350",
+            msg_id: "msg_id__460350",
+          },
+          app_name: "v2app1",
+          direction: "RECEIVED",
+        };
+        // addP2BMessageToChatBody(chatBody, obj)
+
+        console.log("loggeriend user", loggedInUser);
+        const botContent = await fetchBotContent(
+          loggedInUser.app_name,
+          loggedInUser.tenant
+        );
+        console.log("botContentsdfsda", botContent.bot_payload);
+        //MAKE THE CALL HERE TO GET THE BOT CONTENTS
+
+        if (botContent && botContent.bot_payload) {
+          renderNode(botContent.bot_payload);
+        }
+      }
+      if (messagesNotRead.length) {
+        const deliveryPayload = {
+          type: "status",
+          msg_ids: messagesNotRead,
+          status: "READ",
+        };
+        updateChatToDB(deliveryPayload);
+        console.log(
+          "sdfiuwhefijsqdhifsdaf",
+          socket,
+          messagesNotRead
+          // status = "DELIVERED",
+          // app_name,
+          // user_id
+        );
+        informPeerSysAboutBULKMsgsStatus(
+          socket,
+          messagesNotRead,
+          "READ",
+          loggedInUser.app_name,
+          loggedInUser.tenant_info.id
+        );
+      }
+
+      if (prv_msgs_ls) {
+        const { messages, pagination } = prv_msgs_ls;
+
+        totalPages = pagination.total_pages || 1;
+        currentPage = pagination.current_page || 1;
+
+        if (messages && messages.length) {
+          chatBody.innerHTML = ""; // Clear the chat body
+          addMessagesToChatBody(messages);
+
+          // Observe the topmost message
+          const firstMessage = chatBody.firstElementChild;
+          if (firstMessage) {
+            observer.observe(firstMessage);
+          }
+
+          // Scroll to the bottom of the initial messages
+          chatBody.scrollTop = chatBody.scrollHeight;
+        }
+      }
+    }
+  })()
+
+  if (tezkit_msgs_unread_p_data.msgs.length) {
+    tezkit_msgs_unread_p_data.msgs.forEach((p_data) => {
+      updateNotificationBell(tezkit_app_data);
+      // const msg = p_data["message"]["message"];
+      // const timestamp = p_data["message"]["timestamp"];
+      let ret_id;
+      let msg_id;
+      if (p_data["message"].hasOwnProperty("ret_id")) {
+        ret_id = p_data["message"]["ret_id"];
+      }
+
+      if (p_data["message"].hasOwnProperty("msg_id")) {
+        msg_id = p_data["message"]["msg_id"];
+      }
+
+      console.log("HERE WE MIGHT WANNA SEND THE TYPE CORRECTLY??/", p_data);
+
+      addNewElementToChatBody(chatBody, p_data, p_data.type, true);
+
+      //check if it was a sent msg or recieved one
+      if (p_data.message.frm_user.id != loggedInUser.id) {
+        informPeerSysAboutMsgStatus(
+          socket,
+          ret_id,
+          "READ",
+          loggedInUser.app_name,
+          p_data.message.frm_user.id
+        );
+      }
+    });
+    const cleared_msgs_obj = {
+      api_key: tezkit_msgs_unread_p_data.api_key,
+      msgs: [],
+    };
+    localStorage.setItem(
+      "tezkit_msgs_unread_data",
+      JSON.stringify(cleared_msgs_obj)
+    );
   }
 }
 
@@ -1616,53 +1618,35 @@ async function renderLeftPart() {
   // Loop through usersList and create elements for each user's full_name
   usersList.forEach((user) => {
     const userElement = document.createElement("div");
-    userElement.textContent = user.full_name;
-    userElement.className = "user-name-item"; // Optional class for styling
-    chat_lr_wrapper.appendChild(userElement);
-  });
-
-  console.log("Left side chat updated with users' names.");
-}
-
-// Call the renderLeftPart function to fetch and render users
-renderLeftPart();
+    userElement.addEventListener('click',async function () {
+    console.log("objectuserElement",user)
+      //here we can try to rerender something in the right part?
+      // loadChatSkelton(rsc)      
+      const rsc = document.querySelector(".right-side-chat")
+      // console.log("rsasdfsdfsdf",rsc)
 
 
+    const tezkit_app_data = localStorage.getItem("tezkit_app_data");
 
-function createChatModal(tezkit_app_data) {
-  console.log("we are creating this on the clikc???")
-  const chat_modal = document.createElement("div");
-  chat_modal.classList.add("chat_modal" + "__" + arbitrary_string_to_diff);
-  chat_modal.id = "chatModal" + "__" + arbitrary_string_to_diff;
-  document.body.appendChild(chat_modal);
-
-  // Function to toggle the modal visibility
-  async function toggleChatModal(loggedInUser) {
-    const chat_modal = document.getElementById(
-      "chatModal" + "__" + arbitrary_string_to_diff
-    );
-
-    if (!chat_modal_open) {
-      // Get the width and height of the window
-      const width = window.innerWidth;
-      // const height =  window.innerHeight;
-
-      // Log the dimensions to the console
-      //
-
-      if (width < MOBILE_WIDTH) {
-        chat_modal.style.display = "flex";
-      } else {
-        chat_modal.style.display = "block";
-      }
-    } else {
-      chat_modal.style.display = "none";
-    }
 
     if (loggedInUser) {
       // Then find the chat_header and the h3 element inside it
-      const chatHeader = chat_modal.querySelector(".chat_header");
-      const theme = localStorage.getItem("theme");
+    const chatHeader = createChatHeader(tezkit_app_data);
+    const chatBody = createChatBody();
+    // rsc.firstChild.remove()
+    while (rsc.firstChild) {
+      rsc.firstChild.remove();
+    }
+    rsc.appendChild(chatHeader)
+    rsc.appendChild(chatBody)
+    
+
+
+      // chatHeader.querySelector(".chat_header");
+    const theme = localStorage.getItem("theme");
+    const chatFooter = createChatFooter(tezkit_app_data, theme, user);
+    rsc.appendChild(chatFooter)
+
       if (theme) {
         const theme_obj = JSON.parse(theme);
         if (theme_obj.chat_box_theme) {
@@ -1677,17 +1661,7 @@ function createChatModal(tezkit_app_data) {
         }
       }
 
-      // chatHeader.style.cssText = "";
-
-      // // Apply your own styles as inline CSS
-      // chatHeader.style.padding = "10px";
-      // chatHeader.style.borderRadius = "5px";
-      // chatHeader.style.backgroundColor = "#f4f4f4";
-      // chatHeader.style.color = "#333";
-      // chatHeader.style.textAlign = "center";
-      // chatHeader.style.fontSize = "18px";
-      // chatHeader.style.boxShadow = "0px 4px 10px rgba(0, 0, 0, 0.2)";
-
+  
       const loginMessage = chatHeader.querySelector("h3");
       const statusElement = chatHeader.querySelector("#statusElement");
       console.log(
@@ -1699,7 +1673,7 @@ function createChatModal(tezkit_app_data) {
 
       console.log("sdfsdfsdtezkit_app_pdataaffd", tezkit_app_pdata.settings);
       if (tezkit_app_pdata.settings.version) {
-        //=='V1' && tezkit_app_pdata.settings.app_type=='P2A'){
+   
         console.log(
           "sdfuhosdh arew wer eroeiegndfg",
           tezkit_app_pdata.tenant_id
@@ -1767,11 +1741,10 @@ function createChatModal(tezkit_app_data) {
                   "Admin"; //loggedInUser.full_name || loggedInUser[identifiers["name_idn"]]
               }
             } else {
-              loginMessage.textContent =
-                (tezkit_me_pdata &&
-                  tezkit_me_pdata.tenant_info &&
-                  tezkit_me_pdata.tenant_info.full_name) ||
-                "Admin"; //loggedInUser.full_name || loggedInUser[identifiers["name_idn"]]
+            console.log("userele",userElement)
+              loginMessage.textContent = user.full_name
+                // (user.full_name) ||
+                // "Admin"; //loggedInUser.full_name || loggedInUser[identifiers["name_idn"]]
             }
           }
         }
@@ -1787,242 +1760,323 @@ function createChatModal(tezkit_app_data) {
         statusElement.textContent = "";
         statusElement.style.background = "#a99bbe";
       }
+    console.log("arewrewrwer")
+      renderRightPart(tezkit_app_data)
+
+    }
+    
+    })
+    userElement.textContent = user.full_name;
+    userElement.className = "user-name-item"; // Optional class for styling
+    chat_lr_wrapper.appendChild(userElement);
+
+
+  });
+
+  console.log("Left side chat updated with users' names.");
+}
+
+// Call the renderLeftPart function to fetch and render users
+// renderLeftPart();
+
+  // Function to toggle the modal visibility
+  async function toggleChatModal(loggedInUser, tezkit_app_data) {
+    const chat_modal = document.getElementById(
+      "chatModal" + "__" + arbitrary_string_to_diff
+    );
+
+    if (!chat_modal_open) {
+      // Get the width and height of the window
+      const width = window.innerWidth;
+  
+
+      if (width < MOBILE_WIDTH) {
+        chat_modal.style.display = "flex";
+      } else {
+        chat_modal.style.display = "block";
+      }
+    } else {
+      chat_modal.style.display = "none";
     }
 
+ 
     chat_modal_open = !chat_modal_open;
   }
 
-  const closeModal = (loggedInUser) => {
-    // chat_modal.style.display = 'none';
-    // chat_modal_open = !chat_modal_open
-    toggleChatModal(loggedInUser);
-  };
+function createChatModal(tezkit_app_data) {
+  console.log("Creating chat modal...");
 
+  const theme = getTheme();
+  const chat_modal = createChatModalContainer();
+  const chatWrapper = createChatWrapper();
+
+  const leftSideChat = createLeftSideChat();
+  const rightSideChat = createRightSideChat(tezkit_app_data, theme);
+
+  chatWrapper.appendChild(leftSideChat);
+  chatWrapper.appendChild(rightSideChat);
+
+  chat_modal.appendChild(chatWrapper);
+
+  const chat_modal_opener_container = createChatModalOpenerContainer(theme, tezkit_app_data);
+  document.body.appendChild(chat_modal);
+
+  return chat_modal_opener_container;
+}
+
+function getTheme() {
   const theme = localStorage.getItem("theme");
-  const theme_p = JSON.parse(theme);
+  return JSON.parse(theme);
+}
 
-  chat_modal.innerHTML = `
-  <div class="chat-lr-wrapper">
-  <div class="left-side-chat">Left Side</div>
-  <div class="right-side-chat">
-  <div class="chat_header">
-      <div style="display: flex; align-items: center;">
-      <h3 id="loginMessage"></h3>
-  <span id="statusElement" style="margin-left: 10px; display: none;"></span>
-      </div>
-      <button id=${
-        "close-btn" + "__" + arbitrary_string_to_diff
-      } ">Close</button>
-  </div>
-  <div class="chat_body" id="chatBody">
-      <!-- Messages will be dynamically added here -->
-  </div>
-  <div class="chat_footer">
-      <input type="text" id="chatInput" placeholder="Type here...">
-      <button id="sendButton">Send</button>
-  </div>
-  </div>
-  </div>
-`;
+function createChatModalContainer() {
+  const chat_modal = document.createElement("div");
+  chat_modal.classList.add("chat_modal" + "__" + arbitrary_string_to_diff);
+  chat_modal.id = "chatModal" + "__" + arbitrary_string_to_diff;
+  document.body.appendChild(chat_modal);
+  return chat_modal;
+}
 
-  // document.getElementById("close-btn").addEventListener("click", (loggedInUser)=>closeModal(loggedInUser));
-  const clsBtn = document.getElementById(
-    "close-btn" + "__" + arbitrary_string_to_diff
+function createChatWrapper() {
+  const chatWrapper = document.createElement("div");
+  chatWrapper.classList.add("chat-lr-wrapper");
+  return chatWrapper;
+}
+
+function createLeftSideChat() {
+  const leftSideChat = document.createElement("div");
+  leftSideChat.classList.add("left-side-chat");
+  leftSideChat.textContent = "Left Side";
+  return leftSideChat;
+}
+
+function loadChatSkelton(rsc) {
+
+  const tezkit_app_data = localStorage.getItem("tezkit_app_data");
+
+    const chatHeader = createChatHeader(tezkit_app_data);
+  const chatBody = createChatBody();
+  const chatFooter = createChatFooter(tezkit_app_data, theme);
+
+  rsc.appendChild(chatHeader);
+  // rightSideChat.appendChild(chatBody);
+  // rightSideChat.appendChild(chatFooter);
+
+
+
+  
+
+  // return rightSideChat
+  // rsc.appendChild(rightSideChat)
+}
+
+function createRightSideChat(tezkit_app_data, theme) {
+  const rightSideChat = document.createElement("div");
+  rightSideChat.classList.add("right-side-chat");
+
+
+  const defaultScreen = document.createElement("div")
+  defaultScreen.textContent = "sall default"
+  rightSideChat.appendChild(defaultScreen);
+
+  return rightSideChat;
+}
+
+
+
+
+function createChatHeader(tezkit_app_data) {
+  const chatHeader = document.createElement("div");
+  chatHeader.classList.add("chat_header");
+
+  const headerLeft = document.createElement("div");
+  headerLeft.style.display = "flex";
+  headerLeft.style.alignItems = "center";
+
+  const loginMessage = document.createElement("h3");
+  loginMessage.id = "loginMessage";
+
+  const statusElement = document.createElement("span");
+  statusElement.id = "statusElement";
+  statusElement.style.marginLeft = "10px";
+  statusElement.style.display = "none";
+
+  headerLeft.appendChild(loginMessage);
+  headerLeft.appendChild(statusElement);
+
+  const closeButton = createCloseButton(tezkit_app_data);
+
+  chatHeader.appendChild(headerLeft);
+  chatHeader.appendChild(closeButton);
+
+  return chatHeader;
+}
+
+function createCloseButton(tezkit_app_data) {
+  const closeButton = document.createElement("button");
+  closeButton.id = "close-btn" + "__" + arbitrary_string_to_diff;
+  closeButton.textContent = "Close";
+
+  closeButton.addEventListener("click", () =>
+    toggleChatModal(loggedInUser, tezkit_app_data)
+
   );
-  clsBtn.addEventListener("click", () => closeModal(loggedInUser));
 
-  if (
-    theme_p &&
-    theme_p.chat_box_theme &&
-    theme_p.chat_box_theme.backgroundColor
-  ) {
-    //override css here... clsBtn
-    clsBtn.style.color = theme_p.chat_box_theme.backgroundColor;
+  return closeButton;
+}
+
+function createChatBody() {
+  const chatBody = document.createElement("div");
+  chatBody.classList.add("chat_body");
+  chatBody.id = "chatBody";
+  return chatBody;
+}
+
+function createChatFooter(tezkit_app_data, theme, user) {
+  console.log("hsdfsadfasdf user in footer",user)
+  const chatFooter = document.createElement("div");
+  chatFooter.classList.add("chat_footer");
+
+  const chatInput = document.createElement("input");
+  chatInput.type = "text";
+  chatInput.id = "chatInput";
+  chatInput.placeholder = "Type here...";
+
+  const sendButton = createSendButton(tezkit_app_data, chatInput,"global_for__"+user.id);
+
+  applyThemeToFooter(sendButton, theme);
+
+  chatFooter.appendChild(chatInput);
+  chatFooter.appendChild(sendButton);
+
+  return chatFooter;
+}
+
+function createSendButton(tezkit_app_data, chatInput,to_id) {
+  const sendButton = document.createElement("button");
+  sendButton.id = "sendButton";
+  sendButton.textContent = "Send";
+
+  sendButton.addEventListener("click", () => handleSend(tezkit_app_data, chatInput,to_id));
+
+  return sendButton;
+}
+
+function handleSend(tezkit_app_data, chatInput, to_id) {
+  if (loggedInUser) {
+    console.log("Sending message...", loggedInUser);
+
+    const newMessage = createNewMessage(loggedInUser, chatInput.value, to_id);
+
+    if (chatInput.value) {
+      const msgId = addNewElementToChatBody(
+        document.getElementById("chatBody"),
+        newMessage,
+        undefined,
+        undefined,
+        "SENT"
+      );
+
+      newMessage.message.ret_id = msgId;
+      newMessage.message.msg_id = msgId;
+
+      socket.emit("ON_MESSAGE_ARRIVAL_BOT", newMessage);
+      addChatToDB(newMessage);
+      chatInput.value = "";
+    }
+  } else {
+    alert("Kindly login first!");
   }
+}
 
-  if (theme_p && theme_p.chat_box_theme && theme_p.chat_box_theme.textColor) {
-    //override css here... clsBtn
-    clsBtn.style.backgroundColor = theme_p.chat_box_theme.textColor;
+function createNewMessage(loggedInUser, messageContent, to_id) {
+  return {
+    room: to_id,
+    message: {
+      message: messageContent,
+      timestamp: Date.now(),
+      frm_user: {
+        id: loggedInUser[identifiers["name_idn"]],
+      },
+      to_user: {
+        id: loggedInUser.tenant_info.id,
+      },
+      app_name: loggedInUser.app_name,
+    },
+  };
+}
+
+function applyThemeToFooter(sendButton, theme) {
+  if (theme && theme.chat_box_theme) {
+    if (theme.chat_box_theme.backgroundColor) {
+      sendButton.style.backgroundColor = theme.chat_box_theme.backgroundColor;
+    }
+    if (theme.chat_box_theme.textColor) {
+      sendButton.style.color = theme.chat_box_theme.textColor;
+    }
   }
+}
 
-  // // Create an img element for the logo
+function createChatModalOpenerContainer(theme, tezkit_app_data) {
   const chat_modal_opener_container = document.createElement("div");
-  // chat_modal_opener_container.style.border = "5px solid red"
-  chat_modal_opener_container.setAttribute(
-    "id",
-    "chat_modal_opener" + "__" + arbitrary_string_to_diff
-  );
-  chat_modal_opener_container.style.display = "flex";
-  chat_modal_opener_container.style.alignItems = "center";
-  chat_modal_opener_container.style.justifyContent = "center";
-  chat_modal_opener_container.style.backgroundColor = "#A370CE";
+  chat_modal_opener_container.id = "chat_modal_opener" + "__" + arbitrary_string_to_diff;
+  chat_modal_opener_container.style = `
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #A370CE;
+    height: 50px;
+    width: 50px;
+    border-radius: 50%;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    margin-right: 10px;
+    cursor: pointer;
+  `;
 
-  if (theme_p && theme_p.chat_opener_theme) {
-    //override css here...
+  if (theme && theme.chat_opener_theme) {
     chat_modal_opener_container.style.backgroundColor =
-      theme_p.chat_opener_theme["backgroundColor"];
+      theme.chat_opener_theme.backgroundColor;
   }
-
-  chat_modal_opener_container.style.height = "50px";
-  chat_modal_opener_container.style.width = "50px";
-  chat_modal_opener_container.style.borderRadius = "50%";
-  chat_modal_opener_container.style.boxShadow = "0px 4px 10px rgba(0, 0, 0, 0.1)";
-  chat_modal_opener_container.style.marginRight = "10px";
-  chat_modal_opener_container.style.cursor = "pointer";
 
   const chat_modal_opener = document.createElement("i");
   chat_modal_opener.classList.add("fas", "fa-comments");
   chat_modal_opener.style.color = "#fff";
   chat_modal_opener.style.fontSize = "24px";
 
-  // Create the badge element
-  const badge = document.createElement("div");
-  badge.setAttribute("id", "unread_chat_msgs_num");
-  badge.style.position = "absolute";
-  badge.style.top = "-5px"; // Adjust to position the badge above the circle
-  badge.style.right = "-5px"; // Adjust to position the badge on the top-right corner
-  badge.style.backgroundColor = "red"; // You can customize the color
-  badge.style.color = "white"; // Badge text color
-  badge.style.borderRadius = "50%";
-  badge.style.padding = "5px 10px"; // Adjust the size of the badge
-  badge.style.fontSize = "12px"; // Adjust the font size of the number
-  badge.textContent = "0"; // Set the number you want to show
-
-  // const theme = localStorage.getItem("theme");
-  // const theme_p = JSON.parse(theme);
-
-  if (theme_p && theme_p.chat_opener_theme) {
-    //override css here...
-    badge.style.color = theme_p.chat_opener_theme.textColor;
-    // badge.style.backgroundColor = theme_p.chat_opener_theme.backgroundColor //has to be different then what it's on so not setting it.
-  }
+  const badge = createUnreadBadge();
 
   chat_modal_opener_container.appendChild(chat_modal_opener);
-  chat_modal_opener_container.appendChild(badge); // This adds the badge to the container
+  chat_modal_opener_container.appendChild(badge);
 
   chat_modal_opener_container.addEventListener("click", async () => {
+    renderLeftPart(tezkit_app_data);
+    // renderRightPart(tezkit_app_data);
+    toggleChatModal(loggedInUser, tezkit_app_data);
 
-    renderLeftPart(tezkit_app_data)
-    renderRightPart(tezkit_app_data)
 
-    toggleChatModal(loggedInUser);
   });
-
-  // document.body.appendChild(chat_modal_opener_container);
-
-  const chatBody = document.getElementById("chatBody");
-  const chatInput = document.getElementById("chatInput");
-  const sendButton = document.getElementById("sendButton");
-
-  const handleSend = () => {
-    if (loggedInUser) {
-      console.log("waht wouldd b ethe thent enatnt e jo", loggedInUser);
-      let new_rply_msg_obj = {
-        // "type": "reply",
-        room: "global_for__" + loggedInUser.tenant_info.id,
-        message: {
-          message: chatInput.value,
-          timestamp: Date.now(),
-          frm_user: {
-            id: loggedInUser[identifiers["name_idn"]],
-            // user: loggedInUser.full_name,
-          },
-          to_user: {
-            id: loggedInUser.tenant_info.id,
-            // user: "Admin",
-          },
-          app_name: loggedInUser.app_name,
-        },
-      };
-
-      if (chatInput.value) {
-        // Pass the error message to the popup
-        // renderErrorPopup([
-        //   "Kindly Type Something First"
-        // ]);
-
-        const tn1 = addNewElementToChatBody(
-          chatBody,
-          JSON.parse(JSON.stringify(new_rply_msg_obj)),
-          undefined,
-          undefined,
-          "SENT"
-        );
-        // addToReadMsgsLs(new_rply_msg_obj);
-
-        const ret_id = new_rply_msg_obj.message.msg_id;
-
-        console.log("werhwerwrwer ", ret_id);
-        // delete new_rply_msg_obj.message.msg_id;
-        new_rply_msg_obj.message.ret_id = tn1;
-        new_rply_msg_obj.message.msg_id = new_rply_msg_obj.message.ret_id;
-
-        console.log(
-          loggedInUser.app_name,
-          "do we see any direc there????",
-          new_rply_msg_obj
-        );
-        socket.emit("ON_MESSAGE_ARRIVAL_BOT", new_rply_msg_obj);
-
-        new_rply_msg_obj.app_name = loggedInUser.app_name;
-        addChatToDB(new_rply_msg_obj);
-        chatInput.value = "";
-      }
-    } else {
-      alert("kindly login first!");
-    }
-  };
-
-  sendButton.removeEventListener("click", handleSend);
-  sendButton.addEventListener("click", handleSend);
-
-  // const theme = localStorage.getItem("theme");
-  if (theme) {
-    const theme_obj = JSON.parse(theme);
-    if (theme_obj.chat_box_theme) {
-      if (theme_obj.chat_box_theme.backgroundColor) {
-        sendButton.style.backgroundColor =
-          theme_obj.chat_box_theme.backgroundColor;
-      }
-    }
-  }
 
   return chat_modal_opener_container;
 }
 
-// Tree-like structure for questions and answers
-const questionTree = {
-  "value": "My first question?",
-  "isQuestion": true,
-  "children": {
-    "learn  python": {
-      "value": "learn  python",
-      "isQuestion": true,
-      "children": {
-        "Learn dev ops": {
-          "value": "Learn dev ops",
-          "isQuestion": true,
-          "children": {
-            "Content on python and dev ops": {
-              "value": "Content on python and dev ops",
-              "isQuestion": false
-            }
-          }
-        },
-        "Learn js": {
-          "value": "Learn js",
-          "isQuestion": true,
-          "children": {
-            "learn physically": {
-              "value": "learn physically",
-              "isQuestion": false
-            }
-          }
-        }
-      }
-    }
-  }
+function createUnreadBadge() {
+  const badge = document.createElement("div");
+  badge.id = "unread_chat_msgs_num";
+  badge.style = `
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: red;
+    color: white;
+    border-radius: 50%;
+    padding: 5px 10px;
+    font-size: 12px;
+  `;
+  badge.textContent = "0";
+  return badge;
 }
+
+
 // Function to render a node (question or answer) dynamically
 function renderNode(node) {
   // const chatBody = document.querySelector(".chat_body");
@@ -2206,7 +2260,9 @@ function initializeSocketConnection(
   if (loggedInUser) {
     // const io = await require('socket.io-client') // For client-side connection
     // const valid_soc_url = process.env.WS_SERVER || "wss://dev.addchat.tech"
-    socket = io(process.env.WS_SERVER || "wss://dev.addchat.tech", { transports: ["websocket"] });
+    socket = io(process.env.WS_SERVER || "wss://dev.addchat.tech", {
+      transports: ["websocket"],
+    });
 
     //
 
@@ -2344,11 +2400,10 @@ export async function initialize(provided_token) {
   headerHandler(tezkit_app_data, token, tezkit_header_req_p);
 
   if (!chat_modal && loggedInUser) {
+      console.log("open")
     chat_modal = createChatModal(tezkit_app_data);
-    
     document.body.appendChild(chat_modal);
   }
-
 }
 
 // export async function initialize(provided_token, apptyp="P2A", version ="V1") {
@@ -3156,7 +3211,7 @@ async function handleLogin(event) {
   }
 }
 
-console.log("is it latested?")
+console.log("is it latested?");
 // Function to handle routing to / root and render a welcome message
 function routeToRoot(path = null) {
   // // Optionally, update the URL to reflect the new route

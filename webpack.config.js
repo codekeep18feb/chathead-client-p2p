@@ -58,7 +58,7 @@ module.exports = (env) => {
                 directory: path.resolve(__dirname, 'dist'),
             },
             compress: true,
-            port: 9002,
+            port: 9030,
             open: true,
             hot: true,
             devMiddleware: {
