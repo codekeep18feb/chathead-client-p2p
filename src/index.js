@@ -1363,72 +1363,6 @@ async function handleMissingAppData() {
 
 
 
-// Function to create a modal element
-// Function to create a modal element
-function createMeModal(data) {
-  const modal = document.createElement("div");
-  Object.assign(modal.style, {
-    width: "300px",
-    position: "absolute",
-    borderRadius: "8px",
-    zIndex: 1000000000,
-    backgroundColor: "white",
-    padding: "16px",
-    border: "1px solid #ccc",
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-    fontFamily: "Arial, sans-serif",
-    fontSize: "14px",
-    color: "#333",
-  });
-
-  // Generate content in a key-value column format
-  const content = `
-    <table style="width: 100%; border-collapse: collapse;">
-      <tbody>
-        ${Object.entries(data)
-          .map(([key, value]) => {
-            if (key === "tenant_info" && typeof value === "object") {
-              // Handle nested tenant_info object
-              return `
-                <tr>
-                  <td colspan="2" style="padding: 8px 0; font-weight: bold; text-align: center;">Tenant Information</td>
-                </tr>
-                ${Object.entries(value)
-                  .map(
-                    ([nestedKey, nestedValue]) =>
-                      `<tr>
-                        <td style="padding: 4px; border-bottom: 1px solid #f0f0f0; text-align: left;">${nestedKey}</td>
-                        <td style="padding: 4px; border-bottom: 1px solid #f0f0f0; text-align: right;">${
-                          typeof nestedValue === "string" &&
-                          nestedValue.startsWith("http")
-                            ? `<img src="${nestedValue}" alt="${nestedKey}" style="width: 50px; height: auto; border-radius: 4px;" />`
-                            : nestedValue
-                        }</td>
-                      </tr>`
-                  )
-                  .join("")}
-              `;
-            }
-
-            return `
-              <tr>
-                <td style="padding: 4px; border-bottom: 1px solid #f0f0f0; text-align: left;">${key}</td>
-                <td style="padding: 4px; border-bottom: 1px solid #f0f0f0; text-align: right;">${
-                  typeof value === "string" && value.startsWith("http")
-                    ? `<img src="${value}" alt="${key}" style="width: 50px; height: auto; border-radius: 4px;" />`
-                    : value
-                }</td>
-              </tr>
-            `;
-          })
-          .join("")}
-      </tbody>
-    </table>
-  `;
-
-  modal.innerHTML = content;
-  return modal;
-}
 
 
 // Function to handle routing to /chat and render a box with an orange background
@@ -1455,28 +1389,6 @@ export function routeToChat() {
 
 
 
-// Function to handle routing to /login and render a login form
-export function meProfileHandler(event) {
-  const existingModal = document.querySelector(".profile-modal");
-
-  if (existingModal) {
-    // Remove modal if it already exists (close it)
-    existingModal.remove();
-  } else {
-    // Create and display the new modal
-    const me = JSON.parse(localStorage.getItem("tezkit_me")); // Parse the stored JSON string
-
-    const modal = createMeModal(me);
-    modal.classList.add("profile-modal"); // Add class to identify it later
-
-    // Position modal below the button
-    modal.style.top = `${
-      event.target.getBoundingClientRect().bottom + window.scrollY
-    }px`;
-    modal.style.right = "0px"; // Position modal on the right edge
-    document.body.appendChild(modal);
-  }
-}
 
 
 

@@ -47,7 +47,7 @@ import {
       throw error; // Rethrow the error for further handling if needed
     }
   };
-  
+
   // loggedInUser.app_name, p_data.message.frm_user.id
 function informPeerSysAboutBULKMsgsStatus(
     socket,
@@ -215,6 +215,11 @@ export let chat_modal_open = false
     loadingElement.textContent = "";
   }
 }
+
+
+
+
+
 
 async function fetchMessages(apiUrl, loadingElement) {
   const tezkit_app_data = localStorage.getItem("tezkit_app_data");
