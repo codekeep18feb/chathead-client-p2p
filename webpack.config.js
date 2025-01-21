@@ -46,7 +46,7 @@ module.exports = (env) => {
             // new webpack.DefinePlugin(envKeys) // Inject environment variables
             new webpack.DefinePlugin({
                 'process.env.CUSTOM_ENV': JSON.stringify('production'),
-                'process.env.WS_SERVER': JSON.stringify('wss://dev.addchat.tech'),
+                'process.env.WS_SERVER': JSON.stringify('ws://122.160.157.99:8022'),
             }),
         ],
         resolve: {
