@@ -5,7 +5,7 @@
 import "./style.css";
 import io from "socket.io-client";
 import {headerHandler,resetSettingFunc} from "./authHandler"
-import {createChatModal, createChatModalOpenerContainer, chat_modal_open, getTheme} from "./chatModal"
+import {createChatModal, createChatModalOpenerContainer, chat_modal_open, getTheme, lc} from "./chatModal"
 
 console.log("Client Activated!!!", process.env.WS_SERVER);
 
@@ -291,7 +291,7 @@ export async function onboarding(userData, tezkitAppPData) {
     });
 }
 
-let socket;
+export let socket;
 
 function addNewElementToChatBody(
   chatBody,
@@ -514,16 +514,6 @@ export const MOBILE_WIDTH = 768;
 
 // Function to check the viewport size
 function checkViewportSize() {
-  // if (width < 800) {
-  //
-  //   chat_modal.style.display = "flex";
-
-  // }
-  // else {
-  //
-  //   chat_modal.style.display = "block";
-
-  // }
 
   const chat_modal = document.getElementById(
     "chatModal" + "__" + arbitrary_string_to_diff
@@ -981,6 +971,98 @@ function updateChatToDB(reactPayload, retryCount = 0) {
   // Initial call to make the request
   makeRequest();
 }
+async function respondVideo(videoElm,offer_str) {
+  console.log("Ensure it's not called multiple times...");
+  // const offer_str = await fetchRTCOffer();
+  console.log("offer_str", offer_str, typeof offer_str);
+  const offer = JSON.parse(offer_str);
+  // console.log("basically need sdp from there??",offer)
+  console.log("here is your offer love",offer,typeof(offer))
+  const rc = new RTCPeerConnection();
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true,
+  });
+  console.log("doweseestream", stream);
+  videoElm.srcObject = stream;
+  // myRef.current = {"srcObject":stream};
+  // setStream(stream);
+  rc.addStream(stream);
+  // const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  console.log("doweseestream", stream);
+  // yourVideoRef.current.srcObject = stream
+  // myRef.current = {"srcObject":stream};
+  // setStream(stream);
+  // rc.addStream(stream);
+  rc.onaddstream = (event) => {
+    console.log("ON REMOTE @ TRACK", event, event.stream,);
+    // myRef.current = {"srcObject":event.stream};
+    // remoteVideoRef.current.srcObject = event.stream;
+    videoElm.srcObject = event.stream;
+
+    // setStream(event.stream)
+    // setRemoteStream(event.stream);
+  };
+
+  rc.ondatachannel = (event) => {
+    // Handle the data channel when it is created
+    const dataChannel = event.channel;
+
+    dataChannel.onopen = () => {
+      console.log("Data channel opened!");
+      // You can add any specific actions you want to perform when the data channel is open.
+    };
+
+    // Handle other data channel events if needed
+  };
+
+  rc.onicecandidate = async (e) => {
+    if (e.candidate) {
+      console.log("herei s the ansto_user_idsdfsadf" + JSON.stringify(rc.localDescription),"global_for__"+offer.frm_user_id);
+      // const to_user_id = await fetchUserId(token, with_email);
+
+      // saveRTCUserAns(
+      //   false,
+      //   JSON.stringify(rc.localDescription),
+      //   to_user_id
+      // );
+
+      socket.emit("RESP_VIDEO",{
+    
+        ans:JSON.stringify(rc.localDescription),
+        frm_user_id:loggedInUser.id,
+        room: "global_for__"+offer.frm_user_id,
+    
+      })
+    }
+  };
+
+  rc.setRemoteDescription(JSON.parse(offer.sdp)).then((a) => {
+    console.log("set remoteDescription with local offer");
+    console.log(
+      "Signaling State after setting remoteDescription",
+      rc.signalingState,
+      a
+    );
+  });
+
+  rc.createAnswer()
+    .then((a) => {
+      rc.setLocalDescription(a);
+      console.log(
+        "Signaling State after setting Local description set as a provisional answer.:",
+        rc.signalingState
+      );
+    })
+    .then((a) => {
+      console.log("answer created");
+      console.log(
+        "Signaling State after setting Local description set as a provisional answer.:",
+        rc.signalingState
+      );
+    });
+  return [rc];
+}
 
 function attachCommonSocks(tezkit_app_data) {
   console.log("identifierssdfsdfsd", identifiers);
@@ -991,6 +1073,71 @@ function attachCommonSocks(tezkit_app_data) {
   socket.on("ON_MESSAGE_ARRIVAL_BOT", function (data) {
     msgHandler(socket, data, tezkit_app_data);
   });
+
+  socket.on("INITIATE_VIDEO",async function (data) {
+    console.log("vidoe sdp has arrived!!",data)
+
+    const chatBody = document.getElementById("chatBody");
+
+
+    const videoCont = document.createElement("div");
+    videoCont.textContent = "just some"; // Optional content or heading
+    chatBody.prepend(videoCont);
+
+    // Create the video element
+    const videoElement = document.createElement("video");
+    await respondVideo(videoElement,data)
+
+    // Set attributes for the video element
+    videoElement.setAttribute("controls", "true"); // Adds play, pause, and volume controls
+    videoElement.setAttribute("width", "400"); // Set width
+    videoElement.setAttribute("height", "300"); // Set height
+    videoElement.setAttribute("autoplay", "true"); // Optional: Automatically play when loaded
+    // videoElement.setAttribute("loop", "true"); // Optional: Loop the video
+    videoElement.setAttribute("muted", "true"); // Optional: Mute the video by default
+
+    // Set the source of the video
+    const sourceElement = document.createElement("source");
+    // sourceElement.setAttribute("src", "path_to_video/video.mp4"); // Replace with the actual video URL
+    // sourceElement.setAttribute("type", "video/mp4"); // Specify the video type
+
+    // Append the source element to the video element
+    videoElement.appendChild(sourceElement);
+
+    // Append the video element to the container
+    videoCont.appendChild(videoElement);
+
+    // Add fallback text for browsers that don't support the <video> element
+    videoElement.textContent = "Your browser does not support the video tag.";
+    
+
+  })
+
+
+  // RESP_VIDEO
+
+  socket.on("RESP_VIDEO",async function (data) {
+    const p_data = JSON.parse(data)
+    console.log(lc, "RESP_VIDEO sdp has arrived!AS ans has arrived!",p_data.ans)
+    lc.setRemoteDescription(JSON.parse(p_data.ans))
+    .then((a) => {
+      console.log("dowseseethantythere");
+      console.log(
+        "Signaling State after setting answer on setRemoteDescription:",
+        lc.signalingState
+      );
+    })
+    .catch((error) => {
+      console.error("Error setting remote description:", error);
+    });
+
+    
+    
+
+  })
+
+
+
 
   socket.on("ON_MESSAGE_ARRIVAL", function (data) {
     msgHandler(socket, data, tezkit_app_data, "REPLY");

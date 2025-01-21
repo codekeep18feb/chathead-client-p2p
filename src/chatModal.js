@@ -1,107 +1,22 @@
 // import {toggleChatModal} from "./chatModal"
 
 const arbitrary_string_to_diff = "j7hD9nXt3QpLvFz1uY6j7m2";
-import {loggedInUser, MOBILE_WIDTH, identifiers} from "./index"
+import {loggedInUser, MOBILE_WIDTH, identifiers, socket} from "./index"
 import {
-    setAppData,
-    awayHandler,
     isKeyTrue,
-    getNextCorrectLength,
+    check_if_user_exists,
+    informPeerSysAboutBULKMsgsStatus,
+    fetchBotContent,
+    fetchMessages,
+    addMessagesToChatBody,
+    fetchV1Users
   } from "../src/utility";
 
 
+  export let chat_modal_open = false
 
 
-  const check_if_user_exists = async (api_key, app_name, uid, tenant) => {
-    const myHeaders = new Headers();
-    // myHeaders.append("X-API-Key", api_key);
-  
-    const requestOptions = {
-      method: "GET",
-      headers: myHeaders,
-      redirect: "follow",
-    };
-  
-    try {
-      const response = await fetch(
-        `https://gfxb0jf19k.execute-api.ap-south-1.amazonaws.com/prod/does_user_exist?app_name=${app_name}&uid=${uid}&tenant=${tenant}`,
-        requestOptions
-      );
-  
-      const textResult = await response.text();
-      console.log("result", textResult, typeof textResult);
-  
-      // Parse the result if it's JSON
-      const result = JSON.parse(textResult);
-      console.log("Parsed result", result);
-  
-      // if (!result.success) {
-      //   // logged in user does not exist in database
-      //   // HERE RAISE AN ERROR
-      //   throw new Error("User does not exist in the database.");
-      // }
-  
-      return result;
-    } catch (error) {
-      console.error("Error:", error);
-      throw error; // Rethrow the error for further handling if needed
-    }
-  };
-
-  // loggedInUser.app_name, p_data.message.frm_user.id
-function informPeerSysAboutBULKMsgsStatus(
-    socket,
-    ret_ids,
-    status = "DELIVERED",
-    app_name,
-    user_id
-  ) {
-    console.log("show me what do e iahve", loggedInUser);
-  
-    // const userKey = !user.hasOwnProperty('uid') ? `user__${user.id}` : `user__${user.uid}`;
-  
-    const right_global_id = "global_for__" + loggedInUser.tenant_info.id;
-    socket.emit("ON_MESSAGE_BULK_STATUS_UPDATE", {
-      ret_ids: ret_ids, // THIS WILL BE DYNAMIC IN NATURE upda
-      room: right_global_id,
-      status: status,
-      timestamp: Date.now(),
-      app_name,
-      user_id,
-    });
-  }
-export let chat_modal_open = false
- // Function to load more messages
-
-
- async function fetchBotContent(app_name, tenant) {
-   console.log("ensure tenant_id is tenant_id", tenant);
-   const myHeaders = new Headers();
-   myHeaders.append("x-api-key", "bGVnYWwxMjNfX1NFUFJBVE9SX190ZXN0ZGRk");
- 
-   const raw = "";
- 
-   const requestOptions = {
-     method: "GET",
-     headers: myHeaders,
-     // body: raw,
-     redirect: "follow",
-   };
- 
-   try {
-     const response = await fetch(
-       `https://sk5ge5ejhd.execute-api.ap-south-1.amazonaws.com/prod/get_bot_content?app_name=${app_name}&tenant_id=${tenant}`,
-       requestOptions
-     );
-     const result = await response.json();
-     console.log(result);
-     return result;
-   } catch (error) {
-     console.error(error);
-   }
- }
-
- function createChatHeader(tezkit_app_data, toggleVideoMode, videoMode=false) {
+ function createChatHeader(tezkit_app_data, toggleVideoMode, videoMode=false, user) {
    // console.log("doesitrerender  at",videoMode)
    const chatHeader = document.createElement("div");
    chatHeader.classList.add("chat_header");
@@ -134,22 +49,18 @@ export let chat_modal_open = false
    // Add click event to video icon (optional)
    videoIcon.addEventListener("click", () => {
      console.log("Video icon clicked!");
-     toggleVideoMode()
+     toggleVideoMode(user)
      // Add your video call logic here
    });
  
-   const closeButton = createCloseButton(tezkit_app_data);
+  
  
    // Append video icon before the close button
    chatHeader.appendChild(headerLeft);
    chatHeader.appendChild(videoIcon); // Add the video icon
-   chatHeader.appendChild(closeButton);
  
    return chatHeader;
  }
- 
-
-
 
  async function loadMoreMessages() {
  console.log("whaeriwer")
@@ -217,111 +128,74 @@ export let chat_modal_open = false
 }
 
 
+const initializeWebRTC = async (videoElement, user) => {
+    console.log("Ensure it's not called multiple times...");
 
+    const lc = new RTCPeerConnection();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
+    });
+    console.log("doweseestream", stream);
+    videoElement.srcObject = stream; // Correct way to assign MediaStream
+    // myRef.current = {"srcObject":stream};
+    // setStream(stream);
+    lc.addStream(stream);
+    lc.onaddstream = (event) => {
+    //   console.log("ON LOCAL @ TRACK", event, event.stream, myRef.current);
+      // myRef.current = {"srcObject":event.stream};
+      // remoteVideoRef.current.srcObject = event.stream;
+      videoElement.srcObject = event.stream;
 
+      // setStream(event.stream)
+      // setRemoteStream(event.stream);
+    };
+    
 
+    lc.onicecandidate = async (e) => {
+      if (e.candidate) {
+        // Candidate is available, but don't save it yet
+        console.log("ICE candidate available");
+      } else if (lc.iceGatheringState === "complete") {
+        // ICE gathering is complete, save the final ICE candidate to the database
+        console.log("ICE gathering is complete");
+      //   const to_user_id = await fetchUserId(token, with_email);
+        console.log(
+          "Final ICE candidate:",
+          JSON.stringify(lc.localDescription)
+        );
+      //   addRTCUserInfo(true, JSON.stringify(lc.localDescription), to_user_id);
+        
+      //here we can send sdp to another client probablly using socket.emit
+      console.log("global_for__"+String(user.id),"send sdp to another client probablly using socket.emit",JSON.stringify(lc.localDescription))
+      console.log("sdfsdfsadfto_user_id",loggedInUser.id)
+      socket.emit("INITIATE_VIDEO",{
+    
+    sdp:JSON.stringify(lc.localDescription),
+    frm_user_id:loggedInUser.id,
+    room: "global_for__"+String(user.id),
 
-async function fetchMessages(apiUrl, loadingElement) {
-  const tezkit_app_data = localStorage.getItem("tezkit_app_data");
-
-  loadingElement.textContent = "Loading...";
-
-  const tezkit_app_pdata = JSON.parse(tezkit_app_data);
-
-  console.log(
-    tezkit_app_pdata.tenant_info.id,
-    "tezkit_apdsp_datdasdfsdf",
-    loggedInUser.uid
-  );
-  try {
-    const token = localStorage.getItem("tezkit_token");
-
-    if (!token && tezkit_app_pdata.settings.version == "V1") {
-      throw new Error("Token is missing");
+  })
+    
     }
-    let response = null;
-    if (tezkit_app_pdata.settings.version == "V1") {
-      console.log("arenot u going frm here???");
-      response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          Authorization: token,
-          Accept: "application/json",
-        },
+    };
+
+    lc.createOffer()
+      .then((o) => lc.setLocalDescription(o))
+      .then((a) => {
+        console.log("offer set successfully!");
+        console.log(
+          "Signaling State after setting local description:",
+          lc.signalingState
+        );
       });
-    } else if (tezkit_app_pdata.settings.version != "V1") {
-      console.log(
-        "arenot u going frm here??? no",
-        tezkit_app_pdata.settings.version
-      );
-
-      response = await fetch(
-        `${apiUrl}&uid=${loggedInUser.uid}&other_user_id=${tezkit_app_pdata.tenant_info.id}`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-    }
-
-    if (!response.ok) {
-      loadingElement.textContent = "";
-
-      throw new Error("Failed to fetch data");
-    }
-
-    const data = await response.json();
-    loadingElement.textContent = "";
-
-    return data;
-  } catch (error) {
-    console.error("Error fetching messages:", error);
-  }
-}
+    return [lc];
+  };
 
 
-// Function to append messages to the chat body
-function addMessagesToChatBody(messages, frm_top) {
-  // const previousScrollHeight = chatBody.scrollHeight; // Save current scroll height before adding messages
-
-  // Record the current scroll height and scroll position
-  const previousScrollHeight = chatBody.scrollHeight;
-  const previousScrollTop = chatBody.scrollTop;
-  messages.forEach((p_data) => {
-    addNewElementToChatBody(
-      chatBody,
-      p_data,
-      p_data.type,
-      false,
-      p_data.direction,
-      frm_top
-    );
-  });
-
-  // Adjust scroll position to show the newly loaded messages
-  // const newScrollHeight = chatBody.scrollHeight;
-  // chatBody.scrollTop = newScrollHeight - previousScrollHeight;
-
-  // Calculate the new scroll position to maintain the previous last message's position
-  const newScrollHeight = chatBody.scrollHeight;
-  const heightDifference = newScrollHeight - previousScrollHeight;
-  chatBody.scrollTop = previousScrollTop + heightDifference;
-
-  // Create the lastMessageElement only if it doesn't exist yet
-  if (!lastMessageElement) {
-    lastMessageElement = document.createElement("div");
-    lastMessageElement.id = "last-message"; // This is the element being observed
-    chatBody.prepend(lastMessageElement); // Add it to the top
-    observer.observe(lastMessageElement); // Start observing the last message element
-  }
-}
-
-
-
+export let lc
 // UpdateVideoIcon function (unchanged)
-function UpdateVideoIcon(videoMode) {
+async function UpdateVideoIcon(videoMode, user) {
   const chatHeader = document.querySelector(".chat_header");
 
   if (chatHeader) {
@@ -338,6 +212,39 @@ function UpdateVideoIcon(videoMode) {
   } else {
     console.error("Chat header not found.");
   }
+  const chatBody = document.getElementById("chatBody");
+
+
+    const videoCont = document.createElement("div");
+    videoCont.textContent = "just some"; // Optional content or heading
+    chatBody.prepend(videoCont);
+
+    // Create the video element
+    const videoElement = document.createElement("video");
+    [lc] = await initializeWebRTC(videoElement, user,)
+    
+    // Set attributes for the video element
+    videoElement.setAttribute("controls", "true"); // Adds play, pause, and volume controls
+    videoElement.setAttribute("width", "400"); // Set width
+    videoElement.setAttribute("height", "300"); // Set height
+    videoElement.setAttribute("autoplay", "true"); // Optional: Automatically play when loaded
+    // videoElement.setAttribute("loop", "true"); // Optional: Loop the video
+    videoElement.setAttribute("muted", "true"); // Optional: Mute the video by default
+
+    // Set the source of the video
+    const sourceElement = document.createElement("source");
+    // sourceElement.setAttribute("src", "path_to_video/video.mp4"); // Replace with the actual video URL
+    // sourceElement.setAttribute("type", "video/mp4"); // Specify the video type
+
+    // Append the source element to the video element
+    videoElement.appendChild(sourceElement);
+
+    // Append the video element to the container
+    videoCont.appendChild(videoElement);
+
+    // Add fallback text for browsers that don't support the <video> element
+    videoElement.textContent = "Your browser does not support the video tag.";
+
 }
 
 export function createUnreadBadge() {
@@ -358,11 +265,14 @@ export function createUnreadBadge() {
 }
 
 export async function renderLeftPart() {
+    const tezkit_app_data = localStorage.getItem("tezkit_app_data");
+
   const usersList = await fetchV1Users(); // Fetch the user list from the API
 
   const chat_lr_wrapper = document.querySelector(
     `.chat_modal__j7hD9nXt3QpLvFz1uY6j7m2 > .chat-lr-wrapper > .left-side-chat`
   );
+  const closeButton = createCloseButton(tezkit_app_data);
 
   if (!chat_lr_wrapper) {
     console.error("Left side chat container not found.");
@@ -370,7 +280,13 @@ export async function renderLeftPart() {
   }
 
   // Clear previous content
-  chat_lr_wrapper.textContent = "";
+//   chat_lr_wrapper.textContent = "";
+    chat_lr_wrapper.appendChild(closeButton)
+
+//   const closeButton = createCloseButton(tezkit_app_data);
+//   chatHeader.appendChild(closeButton);
+
+//   chat_lr_wrapper.appendChild(closeButton)
 
   // Loop through usersList and create elements for each user's full_name
   usersList.forEach((user) => {
@@ -382,13 +298,12 @@ export async function renderLeftPart() {
       const rsc = document.querySelector(".right-side-chat");
       // console.log("rsasdfsdfsdf",rsc)
 
-      const tezkit_app_data = localStorage.getItem("tezkit_app_data");
 
       if (loggedInUser) {
         // let videoMode = false
 
         // Then find the chat_header and the h3 element inside it
-        const chatHeader = createChatHeader(tezkit_app_data, toggleVideoMode);
+        const chatHeader = createChatHeader(tezkit_app_data, toggleVideoMode, undefined, user);
         console.log("videoMode this might not rerender");
         const chatBody = createChatBody();
         // rsc.firstChild.remove()
@@ -526,41 +441,7 @@ export async function renderLeftPart() {
   console.log("Left side chat updated with users' names.");
 }
 
-async function fetchV1Users() {
-  const myHeaders = new Headers();
-  myHeaders.append("x-api-key", "amV3ZWxlcnlraW5nX19TRVBSQVRPUl9fdjFhcHAx");
-  myHeaders.append("Content-Type", "application/json");
 
-  const raw = JSON.stringify({
-    app_name: "v1app1",
-    version: "V1",
-    tenant: "jeweleryking",
-  });
-
-  const requestOptions = {
-    method: "POST",
-    headers: myHeaders,
-    body: raw,
-    redirect: "follow",
-  };
-
-  try {
-    const response = await fetch(
-      "https://gfxb0jf19k.execute-api.ap-south-1.amazonaws.com/prod/users_list",
-      requestOptions
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const usersList = await response.json(); // Parse the JSON response
-    return usersList; // Return the fetched data
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    return []; // Return an empty array on error
-  }
-}
 
 function renderRightPart(tezkit_app_data) {
   console.log("aerwerwerewrewsdfsdf");
@@ -753,10 +634,10 @@ function renderRightPart(tezkit_app_data) {
 let videoMode = false; // Default state
 
 // Function to toggle videoMode and update the video icon
-function toggleVideoMode() {
+function toggleVideoMode(user) {
   videoMode = !videoMode; // Toggle the state
   console.log("Toggled videoMode:", videoMode);
-  UpdateVideoIcon(videoMode); // Update the video icon based on the state
+  UpdateVideoIcon(videoMode, user); // Update the video icon based on the state
 }
 
 function applyThemeToFooter(sendButton, theme) {
@@ -893,7 +774,7 @@ function renderNode(node) {
 function createCloseButton(tezkit_app_data) {
   const closeButton = document.createElement("button");
   closeButton.id = "close-btn" + "__" + arbitrary_string_to_diff;
-  closeButton.textContent = "Close";
+  closeButton.textContent = "Clos1e";
 
   closeButton.addEventListener("click", () =>
     toggleChatModal(loggedInUser, tezkit_app_data)
@@ -976,6 +857,9 @@ export function createChatModalOpenerContainer(theme, tezkit_app_data) {
   chat_modal_opener_container.appendChild(badge);
 
   chat_modal_opener_container.addEventListener("click", async () => {
+    // chat_lr_wrapper.textContent = "";
+  
+
     renderLeftPart(tezkit_app_data);
     // renderRightPart(tezkit_app_data);
     toggleChatModal(loggedInUser, tezkit_app_data);
@@ -1040,7 +924,7 @@ export function createChatWrapper() {
 export function createLeftSideChat() {
   const leftSideChat = document.createElement("div");
   leftSideChat.classList.add("left-side-chat");
-  leftSideChat.textContent = "Left Side";
+//   leftSideChat.textContent = "Left Side";
   return leftSideChat;
 }
 
@@ -1056,6 +940,7 @@ export function createRightSideLoader(tezkit_app_data, theme) {
 }
 
 export function createChatModal(tezkit_app_data) {
+
   console.log("Creating chat modal...");
 
   const theme = getTheme();
@@ -1071,11 +956,7 @@ export function createChatModal(tezkit_app_data) {
 
   chat_modal.appendChild(chatWrapper);
 
-//   const chat_modal_opener_container = createChatModalOpenerContainer(
-//     theme,
-//     tezkit_app_data
-//   );
-//   document.body.appendChild(chat_modal);
+
 
   return chat_modal;
 }
