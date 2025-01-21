@@ -1071,11 +1071,11 @@ export function createChatModal(tezkit_app_data) {
 
   chat_modal.appendChild(chatWrapper);
 
-  const chat_modal_opener_container = createChatModalOpenerContainer(
-    theme,
-    tezkit_app_data
-  );
-  document.body.appendChild(chat_modal);
+//   const chat_modal_opener_container = createChatModalOpenerContainer(
+//     theme,
+//     tezkit_app_data
+//   );
+//   document.body.appendChild(chat_modal);
 
-  return chat_modal_opener_container;
+  return chat_modal;
 }

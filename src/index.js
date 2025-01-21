@@ -5,7 +5,7 @@
 import "./style.css";
 import io from "socket.io-client";
 import {headerHandler,resetSettingFunc} from "./authHandler"
-import {createChatModal, chat_modal_open} from "./chatModal"
+import {createChatModal, createChatModalOpenerContainer, chat_modal_open, getTheme} from "./chatModal"
 
 console.log("Client Activated!!!", process.env.WS_SERVER);
 
@@ -1147,6 +1147,14 @@ export async function initialize(provided_token) {
       console.log("open")
     chat_modal = createChatModal(tezkit_app_data);
     document.body.appendChild(chat_modal);
+  const theme = getTheme();
+
+    const chat_modal_opener_container = createChatModalOpenerContainer(
+      theme,
+      tezkit_app_data
+    );
+  document.body.appendChild(chat_modal_opener_container);
+
   }
 }
 
