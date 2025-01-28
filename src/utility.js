@@ -212,14 +212,14 @@ export  function addMessagesToChatBody(messages, frm_top) {
   }
 
 
-export  async function fetchV1Users() {
+export  async function fetchV1Users(api_key, app_name, versoin) {
     const myHeaders = new Headers();
-    myHeaders.append("x-api-key", "amV3ZWxlcnlraW5nX19TRVBSQVRPUl9fdjFhcHAx");
+    myHeaders.append("x-api-key", api_key);
     myHeaders.append("Content-Type", "application/json");
   
     const raw = JSON.stringify({
-      app_name: "v1app1",
-      version: "V1",
+      app_name: app_name,
+      version: versoin,
       tenant: "jeweleryking",
     });
   
@@ -285,7 +285,7 @@ export function awayHandler(loggedInUser, socket, apptyp, version, identifiers) 
 
     console.log(token, "tokensdfasdfdssdaloggedInUser", loggedInUser);
 
-    if (apptyp == "P2A" && version == "V1") {
+    if (apptyp == "P2P" && version == "V1") {
       let headersList = {
         Accept: "*/*",
         "User-Agent": "Thunder Client (https://www.thunderclient.com)",
@@ -320,7 +320,7 @@ export function awayHandler(loggedInUser, socket, apptyp, version, identifiers) 
 
     }
 
-    else if (apptyp == "P2A" && version == "V2") {
+    else if (apptyp == "P2P" && version == "V2") {
       const tezkit_app_data = localStorage.getItem("tezkit_app_data");
 
       const tezkit_app_pdata = JSON.parse(tezkit_app_data);
@@ -333,7 +333,7 @@ export function awayHandler(loggedInUser, socket, apptyp, version, identifiers) 
         "Content-Type": "application/json",
       };
 
-      console.log("ahere is p2a v2.1", loggedInUser);
+      console.log("ahere is p2p v2.1", loggedInUser);
 
       let bodyContent = JSON.stringify({ ...loggedInUser, is_online: false });
 
@@ -399,7 +399,7 @@ export function awayHandler(loggedInUser, socket, apptyp, version, identifiers) 
 
           let headersList = {};
 
-          if (apptyp == "P2A" && version == "V1") {
+          if (apptyp == "P2P" && version == "V1") {
             headersList = {
               Accept: "*/*",
               "User-Agent": "Thunder Client (https://www.thunderclient.com)",
@@ -434,7 +434,7 @@ export function awayHandler(loggedInUser, socket, apptyp, version, identifiers) 
       
           }
       
-          else if (apptyp == "P2A" && version == "V2") {
+          else if (apptyp == "P2P" && version == "V2") {
             let headersList = {
               Accept: "*/*",
               "User-Agent": "Thunder Client (https://www.thunderclient.com)",
@@ -442,7 +442,7 @@ export function awayHandler(loggedInUser, socket, apptyp, version, identifiers) 
               "Content-Type": "application/json",
             };
       
-            console.log("ahere is p2a v2.1", loggedInUser);
+            console.log("ahere is p2p v2.1", loggedInUser);
       
             let bodyContent = JSON.stringify({ ...loggedInUser, is_online: true });
       
