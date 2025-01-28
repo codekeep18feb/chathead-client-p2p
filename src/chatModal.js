@@ -169,16 +169,43 @@ const initializeWebRTC = async (videoElement, user) => {
       //here we can send sdp to another client probablly using socket.emit
       console.log("global_for__"+String(user.id),"send sdp to another client probablly using socket.emit",JSON.stringify(lc.localDescription))
       console.log("sdfsdfsadfto_user_id",loggedInUser.id)
-      socket.emit("INITIATE_VIDEO",{
-    
-    sdp:JSON.stringify(lc.localDescription),
-    frm_user_id:loggedInUser.id,
-    room: "global_for__"+String(user.id),
 
-  })
+      socket.emit("INITIATE_VIDEO",{
+        sdp:JSON.stringify(lc.localDescription),
+        frm_user_id:loggedInUser.id,
+        room: "global_for__"+String(user.id),
+
+      })
+
+    //SHOW INITIATOR UI @ initiator
+    console.log("Calling...")
+
+
     
     }
     };
+
+    lc.onsignalingstatechange = () => {
+      console.log("Signaling state changed:", lc.signalingState);
+    };
+
+    lc.oniceconnectionstatechange = () => {
+      console.log("ICE connection Signaling state changed:", lc.iceConnectionState);
+      if (lc.iceConnectionState == "connected"){
+        console.log("yes it sconnected now!")
+        const dialer = document.getElementById('dialer')
+        dialer.remove()
+  
+        const ongoingCallDiv = document.getElementById("outgoing-call")
+        console.log("ongoingCallDivasdfsd",ongoingCallDiv)
+        const videoElm = ongoingCallDiv.querySelector('video')
+        videoElm.style.visibility = "visible"
+        
+
+      }
+    };
+    
+    
 
     lc.createOffer()
       .then((o) => lc.setLocalDescription(o))
@@ -216,11 +243,23 @@ async function UpdateVideoIcon(videoMode, user) {
 
 
     const videoCont = document.createElement("div");
-    videoCont.textContent = "just some"; // Optional content or heading
+    // videoCont.textContent = "just some"; // Optional content or heading
     chatBody.prepend(videoCont);
 
     // Create the video element
     const videoElement = document.createElement("video");
+    videoCont.setAttribute("id","outgoing-call")
+
+    // videoElement.style.display = "none";
+    videoElement.style.visibility = "hidden";
+
+
+    let initiatorCallingUIi = document.createElement("div");
+    initiatorCallingUIi.setAttribute("id","dialer")
+    initiatorCallingUIi.innerHTML = "Calling..."; // Adds bold text
+
+
+
     [lc] = await initializeWebRTC(videoElement, user,)
     
     // Set attributes for the video element
@@ -240,6 +279,7 @@ async function UpdateVideoIcon(videoMode, user) {
     videoElement.appendChild(sourceElement);
 
     // Append the video element to the container
+    videoCont.appendChild(initiatorCallingUIi);
     videoCont.appendChild(videoElement);
 
     // Add fallback text for browsers that don't support the <video> element
@@ -266,179 +306,183 @@ export function createUnreadBadge() {
 
 export async function renderLeftPart() {
     const tezkit_app_data = localStorage.getItem("tezkit_app_data");
+    let tezkit_app_pdata = null
+  if (tezkit_app_data){
+    tezkit_app_pdata = JSON.parse(tezkit_app_data)
+    if (tezkit_app_pdata){
+      console.log("tezkit_app_datasdfasdf",tezkit_app_pdata)
+      const usersList = await fetchV1Users(tezkit_app_pdata.auth_key,tezkit_app_pdata.app_name, tezkit_app_pdata.settings.version); // Fetch the user list from the API
 
-  const usersList = await fetchV1Users(); // Fetch the user list from the API
-
-  const chat_lr_wrapper = document.querySelector(
-    `.chat_modal__j7hD9nXt3QpLvFz1uY6j7m2 > .chat-lr-wrapper > .left-side-chat`
-  );
-  const closeButton = createCloseButton(tezkit_app_data);
-
-  if (!chat_lr_wrapper) {
-    console.error("Left side chat container not found.");
-    return;
-  }
-
-  // Clear previous content
-//   chat_lr_wrapper.textContent = "";
-    chat_lr_wrapper.appendChild(closeButton)
-
-//   const closeButton = createCloseButton(tezkit_app_data);
-//   chatHeader.appendChild(closeButton);
-
-//   chat_lr_wrapper.appendChild(closeButton)
-
-  // Loop through usersList and create elements for each user's full_name
-  usersList.forEach((user) => {
-    const userElement = document.createElement("div");
-    userElement.addEventListener("click", async function () {
-      console.log("objectuserElement", user);
-      //here we can try to rerender something in the right part?
-      // loadChatSkelton(rsc)
-      const rsc = document.querySelector(".right-side-chat");
-      // console.log("rsasdfsdfsdf",rsc)
-
-
-      if (loggedInUser) {
-        // let videoMode = false
-
-        // Then find the chat_header and the h3 element inside it
-        const chatHeader = createChatHeader(tezkit_app_data, toggleVideoMode, undefined, user);
-        console.log("videoMode this might not rerender");
-        const chatBody = createChatBody();
-        // rsc.firstChild.remove()
-        while (rsc.firstChild) {
-          rsc.firstChild.remove();
-        }
-        rsc.appendChild(chatHeader);
-        rsc.appendChild(chatBody);
-
-        // chatHeader.querySelector(".chat_header");
-        const theme = localStorage.getItem("theme");
-        const chatFooter = createChatFooter(tezkit_app_data, theme, user);
-        rsc.appendChild(chatFooter);
-
-        if (theme) {
-          const theme_obj = JSON.parse(theme);
-          if (theme_obj.chat_box_theme) {
-            if (theme_obj.chat_box_theme.textColor) {
-              chatHeader.style.color = theme_obj.chat_box_theme.textColor;
+      const chat_lr_wrapper = document.querySelector(
+        `.chat_modal__j7hD9nXt3QpLvFz1uY6j7m2 > .chat-lr-wrapper > .left-side-chat`
+      );
+      const closeButton = createCloseButton(tezkit_app_data);
+    
+      if (!chat_lr_wrapper) {
+        console.error("Left side chat container not found.");
+        return;
+      }
+    
+      // Clear previous content
+    //   chat_lr_wrapper.textContent = "";
+        chat_lr_wrapper.appendChild(closeButton)
+    
+  
+      usersList.forEach((user) => {
+        const userElement = document.createElement("div");
+        userElement.addEventListener("click", async function () {
+          console.log("objectuserElement", user);
+          //here we can try to rerender something in the right part?
+          // loadChatSkelton(rsc)
+          const rsc = document.querySelector(".right-side-chat");
+          // console.log("rsasdfsdfsdf",rsc)
+    
+    
+          if (loggedInUser) {
+            // let videoMode = false
+    
+            // Then find the chat_header and the h3 element inside it
+            const chatHeader = createChatHeader(tezkit_app_data, toggleVideoMode, undefined, user);
+            console.log("videoMode this might not rerender");
+            const chatBody = createChatBody();
+            // rsc.firstChild.remove()
+            while (rsc.firstChild) {
+              rsc.firstChild.remove();
             }
-            if (theme_obj.chat_box_theme.backgroundColor) {
-              console.log("overriding them preferences!!!");
-              chatHeader.style.backgroundColor =
-                theme_obj.chat_box_theme.backgroundColor;
-            }
-          }
-        }
-
-        const loginMessage = chatHeader.querySelector("h3");
-        const statusElement = chatHeader.querySelector("#statusElement");
-        console.log(
-          "dowerelly have an identifier here for all versions",
-          identifiers
-        );
-
-        const tezkit_app_pdata = JSON.parse(tezkit_app_data);
-
-        console.log("sdfsdfsdtezkit_app_pdataaffd", tezkit_app_pdata.settings);
-        if (tezkit_app_pdata.settings.version) {
-          console.log(
-            "sdfuhosdh arew wer eroeiegndfg",
-            tezkit_app_pdata.tenant_id
-          );
-
-          const tezkit_me_data = localStorage.getItem("tezkit_me");
-          if (tezkit_me_data) {
-            const tezkit_me_pdata = JSON.parse(tezkit_me_data);
-
-            console.log("tezkit_me_pdatasfsfsdfsd", tezkit_me_pdata);
-            if (loggedInUser) {
-              console.log(
-                loggedInUser,
-                "sdfsdfsdhfsdhftezkit_me_pdata",
-                tezkit_app_pdata
-              );
-
-              // chat_box_err.error
-              if (tezkit_app_pdata.settings.version != "V1") {
-                console.log(
-                  "tezkit_app_p_dataewsedfsdfasdfsd",
-                  tezkit_app_pdata,
-                  tezkit_app_pdata.auth_key,
-                  loggedInUser
-                );
-                const userExist = await check_if_user_exists(
-                  tezkit_app_pdata.auth_key,
-                  tezkit_app_pdata.app_name,
-                  loggedInUser.uid,
-                  tezkit_app_pdata.tenant_id
-                );
-
-                console.log("fasdfasdfsdfuserExist", userExist);
-                if (!userExist.success) {
-                  console.log("faltu ki baate", userExist.success);
-                  loginMessage.textContent = "Error Loading User";
-                  console.log("chaewrewrewrewrchatBody", chatBody);
-
-                  const errorDiv = document.createElement("div");
-                  // errorDiv.setAttribute("id","chatbox-error")
-                  chatBody.textContent = "";
-                  errorDiv.textContent = "Invalid User";
-                  errorDiv.style.color = "red";
-                  chatBody.appendChild(errorDiv);
-
-                  const modal = document.querySelector(
-                    ".chat_modal__j7hD9nXt3QpLvFz1uY6j7m2"
-                  ); // Get the modal element
-                  const sendButton = modal.querySelector("#sendButton"); // Find sendButton inside the modal
-
-                  if (sendButton) {
-                    sendButton.disabled = true; // Disable the button
-
-                    // Add a hover message for disabled state
-                    sendButton.setAttribute("title", "✖ disabled");
-                    console.log("Button disabled with hover message");
-                  } else {
-                    console.log("Send button not found");
-                  }
-                } else {
-                  loginMessage.textContent =
-                    (tezkit_me_pdata &&
-                      tezkit_me_pdata.tenant_info &&
-                      tezkit_me_pdata.tenant_info.full_name) ||
-                    "Admin"; //loggedInUser.full_name || loggedInUser[identifiers["name_idn"]]
+            rsc.appendChild(chatHeader);
+            rsc.appendChild(chatBody);
+    
+            // chatHeader.querySelector(".chat_header");
+            const theme = localStorage.getItem("theme");
+            const chatFooter = createChatFooter(tezkit_app_data, theme, user);
+            rsc.appendChild(chatFooter);
+    
+            if (theme) {
+              const theme_obj = JSON.parse(theme);
+              if (theme_obj.chat_box_theme) {
+                if (theme_obj.chat_box_theme.textColor) {
+                  chatHeader.style.color = theme_obj.chat_box_theme.textColor;
                 }
-              } else {
-                console.log("userele", userElement);
-                loginMessage.textContent = user.full_name;
-                // (user.full_name) ||
-                // "Admin"; //loggedInUser.full_name || loggedInUser[identifiers["name_idn"]]
+                if (theme_obj.chat_box_theme.backgroundColor) {
+                  console.log("overriding them preferences!!!");
+                  chatHeader.style.backgroundColor =
+                    theme_obj.chat_box_theme.backgroundColor;
+                }
               }
             }
+    
+            const loginMessage = chatHeader.querySelector("h3");
+            const statusElement = chatHeader.querySelector("#statusElement");
+            console.log(
+              "dowerelly have an identifier here for all versions",
+              identifiers
+            );
+    
+            const tezkit_app_pdata = JSON.parse(tezkit_app_data);
+    
+            console.log("sdfsdfsdtezkit_app_pdataaffd", tezkit_app_pdata.settings);
+            if (tezkit_app_pdata.settings.version) {
+              console.log(
+                "sdfuhosdh arew wer eroeiegndfg",
+                tezkit_app_pdata.tenant_id
+              );
+    
+              const tezkit_me_data = localStorage.getItem("tezkit_me");
+              if (tezkit_me_data) {
+                const tezkit_me_pdata = JSON.parse(tezkit_me_data);
+    
+                console.log("tezkit_me_pdatasfsfsdfsd", tezkit_me_pdata);
+                if (loggedInUser) {
+                  console.log(
+                    loggedInUser,
+                    "sdfsdfsdhfsdhftezkit_me_pdata",
+                    tezkit_app_pdata
+                  );
+    
+                  // chat_box_err.error
+                  if (tezkit_app_pdata.settings.version != "V1") {
+                    console.log(
+                      "tezkit_app_p_dataewsedfsdfasdfsd",
+                      tezkit_app_pdata,
+                      tezkit_app_pdata.auth_key,
+                      loggedInUser
+                    );
+                    const userExist = await check_if_user_exists(
+                      tezkit_app_pdata.auth_key,
+                      tezkit_app_pdata.app_name,
+                      loggedInUser.uid,
+                      tezkit_app_pdata.tenant_id
+                    );
+    
+                    console.log("fasdfasdfsdfuserExist", userExist);
+                    if (!userExist.success) {
+                      console.log("faltu ki baate", userExist.success);
+                      loginMessage.textContent = "Error Loading User";
+                      console.log("chaewrewrewrewrchatBody", chatBody);
+    
+                      const errorDiv = document.createElement("div");
+                      // errorDiv.setAttribute("id","chatbox-error")
+                      chatBody.textContent = "";
+                      errorDiv.textContent = "Invalid User";
+                      errorDiv.style.color = "red";
+                      chatBody.appendChild(errorDiv);
+    
+                      const modal = document.querySelector(
+                        ".chat_modal__j7hD9nXt3QpLvFz1uY6j7m2"
+                      ); // Get the modal element
+                      const sendButton = modal.querySelector("#sendButton"); // Find sendButton inside the modal
+    
+                      if (sendButton) {
+                        sendButton.disabled = true; // Disable the button
+    
+                        // Add a hover message for disabled state
+                        sendButton.setAttribute("title", "✖ disabled");
+                        console.log("Button disabled with hover message");
+                      } else {
+                        console.log("Send button not found");
+                      }
+                    } else {
+                      loginMessage.textContent =
+                        (tezkit_me_pdata &&
+                          tezkit_me_pdata.tenant_info &&
+                          tezkit_me_pdata.tenant_info.full_name) ||
+                        "Admin"; //loggedInUser.full_name || loggedInUser[identifiers["name_idn"]]
+                    }
+                  } else {
+                    console.log("userele", userElement);
+                    loginMessage.textContent = user.full_name;
+                    // (user.full_name) ||
+                    // "Admin"; //loggedInUser.full_name || loggedInUser[identifiers["name_idn"]]
+                  }
+                }
+              }
+            }
+    
+            const beta_toggle = isKeyTrue(
+              tezkit_app_pdata.beta_toggle,
+              "P2A",
+              "live_status"
+            )
+    
+            if (beta_toggle) {
+              statusElement.textContent = "";
+              statusElement.style.background = "#a99bbe";
+            }
+            console.log("arewrewrwer");
+            renderRightPart(tezkit_app_data);
           }
-        }
+        });
+        userElement.textContent = user.full_name;
+        userElement.className = "user-name-item"; // Optional class for styling
+        chat_lr_wrapper.appendChild(userElement);
+      });
+    
+      console.log("Left side chat updated with users' names.");
+    }
 
-        const beta_toggle = isKeyTrue(
-          tezkit_app_pdata.beta_toggle,
-          "consumer",
-          "receive_live_status_from_connected_clients"
-        );
 
-        if (beta_toggle) {
-          statusElement.textContent = "";
-          statusElement.style.background = "#a99bbe";
-        }
-        console.log("arewrewrwer");
-        renderRightPart(tezkit_app_data);
-      }
-    });
-    userElement.textContent = user.full_name;
-    userElement.className = "user-name-item"; // Optional class for styling
-    chat_lr_wrapper.appendChild(userElement);
-  });
+  }
 
-  console.log("Left side chat updated with users' names.");
 }
 
 

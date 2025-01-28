@@ -269,6 +269,7 @@ export async function onboarding(userData, tezkitAppPData) {
     tenant: tezkitAppPData.tenant_id,
     uid: userData.uid,
     app_name: tezkitAppPData.app_name,
+    version:tezkitAppPData.settings.version
   };
 
   // Making the POST request
@@ -1075,7 +1076,7 @@ function attachCommonSocks(tezkit_app_data) {
   });
 
   socket.on("INITIATE_VIDEO",async function (data) {
-    console.log("vidoe sdp has arrived!!",data)
+    console.log("Incoming Video Call...!!",data)
 
     const chatBody = document.getElementById("chatBody");
 
@@ -1086,7 +1087,13 @@ function attachCommonSocks(tezkit_app_data) {
 
     // Create the video element
     const videoElement = document.createElement("video");
-    await respondVideo(videoElement,data)
+    videoCont.setAttribute("id","incoming-call")
+
+    videoElement.style.display = "none"
+    // videoElement.style.visibility = "hidden";
+
+
+
 
     // Set attributes for the video element
     videoElement.setAttribute("controls", "true"); // Adds play, pause, and volume controls
@@ -1107,6 +1114,33 @@ function attachCommonSocks(tezkit_app_data) {
     // Append the video element to the container
     videoCont.appendChild(videoElement);
 
+
+    // Create the div element
+    let initiatorCallingUIi = document.createElement("div");
+    initiatorCallingUIi.setAttribute("id", "dialer");
+    initiatorCallingUIi.innerHTML = "Getting a call...<br>";
+
+    // Create the Accept button
+    const acceptButton = document.createElement("button");
+    acceptButton.textContent = "Accept"; // Set the button text
+    // acceptButton.setAttribute("id", "acceptButton"); // Set an ID for styling or identification
+    // acceptButton.setAttribute("class", "btn btn-success"); // Add classes for styling if needed
+    acceptButton.addEventListener('click',async function () {
+      await respondVideo(videoElement,data)
+      const dialer = document.getElementById('dialer')
+      dialer.remove()
+
+      const ongoingCallDiv = document.getElementById("incoming-call")
+      const videoElm = ongoingCallDiv.querySelector('video')
+      videoElm.style.display = "block"
+
+    })
+    // Append the button to the div
+    initiatorCallingUIi.appendChild(acceptButton);
+
+
+
+    videoCont.appendChild(initiatorCallingUIi)
     // Add fallback text for browsers that don't support the <video> element
     videoElement.textContent = "Your browser does not support the video tag.";
     
@@ -1205,9 +1239,9 @@ function initializeSocketConnection(
 
         const beta_toggle = isKeyTrue(
           tezkit_app_pdata.beta_toggle,
-          "consumer",
-          "receive_live_status_from_connected_clients"
-        );
+          "P2A",
+          "live_status"
+        )
         console.log("asdfsadfsadf", beta_toggle);
         if (beta_toggle.enable) {
           console.log("arewehever");
@@ -1239,7 +1273,7 @@ function initializeSocketConnection(
 }
 
 
-// export async function initialize(provided_token, apptyp="P2A", version ="V1") {
+// export async function initialize(provided_token, apptyp="P2P", version ="V1") {
 export async function initialize(provided_token) {
   // Attach the function to the resize event
   window.addEventListener("resize", checkViewportSize);
@@ -1305,7 +1339,7 @@ export async function initialize(provided_token) {
   }
 }
 
-// export async function initialize(provided_token, apptyp="P2A", version ="V1") {
+// export async function initialize(provided_token, apptyp="P2P", version ="V1") {
 export async function logout() {
   // localStorage.removeItem("token");
 
@@ -1349,7 +1383,7 @@ async function handleUserAuthentication(
   }
 
   // Validate `apptyp` before proceeding
-  const supportedAppTypes = ["P2A"]; // Example: Add supported app types here
+  const supportedAppTypes = ["P2P"]; // Example: Add supported app types here
   if (!supportedAppTypes.includes(apptyp)) {
     throw new Error(`Unsupported application type: ${apptyp}`);
   }
@@ -1424,6 +1458,7 @@ async function handleUserAuthentication(
             tenant: tezkit_app_p_data.tenant_id,
             uid: user_data.uid,
             app_name: tezkit_app_p_data.app_name,
+            version:tezkit_app_p_data.settings.version
           });
 
           fetch(reqUrl, {
